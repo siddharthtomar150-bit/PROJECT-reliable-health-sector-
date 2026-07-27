@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthRought - Smart Healthcare & Hospital Finder Platform</title>
+  <meta name="description" content="HealthRought smart healthcare portal connecting patients with verified hospitals, transparent procedure costs, live bed tracking, and instant ambulance dispatch.">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Leaflet Interactive Maps Engine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Google Maps API (Set YOUR_API_KEY to enable Google Maps tiles) -->
+  <!-- <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script> -->
+</head>
+<body>
+
+  <!-- Top Emergency Hotline Bar -->
+  <div class="top-hotline-bar">
+    <div class="hotline-links">
+      <span class="hotline-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        Emergency Hotline: <strong>108</strong> / <strong>102</strong>
+      </span>
+      <span class="hotline-item">
+        National Health Helpline: <strong>14477</strong>
+      </span>
+    </div>
+    <div>
+      Government & NABH Partner Network
+    </div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <div class="brand-icon-svg">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 6v12M6 12h12"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">HealthRought</div>
+          <div class="brand-subtitle">Smart Healthcare & Hospital Network</div>
+        </div>
+      </a>
+
+      <!-- User Profile and Logout (Visible when authenticated) -->
+      <div class="user-profile-header" id="userProfileHeader" style="display: none;">
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+        <div class="profile-info">
+          <div id="headerUserName" class="profile-name"></div>
+          <div id="headerUserRole" class="profile-role-badge"></div>
+        </div>
+        <button class="btn btn-outline" id="btnLogout" style="padding: 6px 12px; font-size: 0.82rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Log Out
+        </button>
+      </div>
+
+      <!-- Hidden Legacy Switcher Container -->
+      <div class="role-switcher" id="headerRoleSwitcher" style="display: none;"></div>
+
+      <div class="sync-badge">
+        <span class="pulse-dot"></span>
+        <span>Real-time Live Sync</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-wrapper">
+
+    <!-- Authentication Section (Login / Signup) -->
+    <section id="authSection" class="view-section active">
+      <div class="auth-wrapper">
+        <div class="auth-card">
+          <div class="auth-header">
+            <h2>Welcome to HealthRought</h2>
+            <p>Access hospital search, live ICU beds, and emergency services</p>
+          </div>
+
+          <!-- Emergency Direct Bypass Button -->
+          <div style="margin-bottom: 1.25rem; text-align: center;">
+            <button id="btnEmergencyGuest" class="btn btn-danger" style="width: 100%; padding: 12px; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); background: linear-gradient(135deg, #ef4444, #dc2626); border: none; cursor: pointer;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              🚨 URGENT EMERGENCY ACCESS (No Login Needed)
+            </button>
+            <div style="font-size: 0.78rem; color: #dc2626; font-weight: 600; margin-top: 6px;">Bypass login for immediate ICU bed search & ambulance booking</div>
+          </div>
+          
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="tabLoginBtn">Sign In</button>
+            <button class="auth-tab" id="tabSignupBtn">Register</button>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm" class="auth-form active">
+            <div class="form-group">
+              <label for="loginEmail">Email Address</label>
+              <input type="email" id="loginEmail" class="form-control" placeholder="patient@healthrought.com" required>
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 10px;">
+              Sign In to Portal
+            </button>
+          </form>
+
+          <!-- Signup Form -->
+          <form id="signupForm" class="auth-form">
+            <div class="form-group">
+              <label for="signupName">Full Name</label>
+              <input type="text" id="signupName" class="form-control" placeholder="Rahul Sharma" required>
+            </div>
+            <div class="form-group">
+              <label for="signupEmail">Email Address</label>
+              <input type="email" id="signupEmail" class="form-control" placeholder="name@domain.com" required>
+            </div>
+            <div class="form-group">
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
+            </div>
+            <div class="form-group">
+              <label for="signupRole">Account Role</label>
+              <select id="signupRole" class="form-select" required>
+                <option value="patient">Patient Seeking Care</option>
+                <option value="admin">Hospital Administrator</option>
+                <option value="driver">Ambulance Dispatch Driver</option>
+              </select>
+            </div>
+            <!-- Hospital Selector (visible for Admin role) -->
+            <div class="form-group" id="signupHospitalGroup" style="display: none;">
+              <label for="signupHospital">Select Assigned Hospital</label>
+              <select id="signupHospital" class="form-select">
+                <option value="hosp-gov-1">AIIMS New Delhi</option>
+                <option value="hosp-gov-2">LLRM Government Medical College</option>
+                <option value="hosp-gov-3">Dr. Ram Manohar Lohia (RML) Hospital</option>
+                <option value="hosp-1">City Care Hospital</option>
+                <option value="hosp-2">Life Line Hospital</option>
+                <option value="hosp-4">Apex Heart & General Hospital</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 10px;">Create Account</button>
+          </form>
+
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light-border-subtle); font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quick Demo Accounts:</div>
+            <div>• <strong>Patient:</strong> <code>patient@healthrought.com</code> / <code>patient123</code></div>
+            <div>• <strong>Hospital Admin:</strong> <code>admin@citycare.com</code> / <code>admin123</code></div>
+            <div>• <strong>Ambulance Driver:</strong> <code>driver@healthrought.com</code> / <code>driver123</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Emergency Ribbon -->
+    <div class="emergency-ribbon" id="emergencyRibbon" style="display: none;">
+      <div class="emergency-info">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Emergency SOS & Live Bed Beacon
+        </h3>
+        <p style="font-size: 0.85rem;">Need urgent emergency ambulance or ICU bed? Trigger immediate location dispatch to nearest network hospitals.</p>
+      </div>
+      <button class="sos-trigger-btn" id="btnGlobalSos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        Instant SOS Alert
+      </button>
+    </div>
+
+    <!-- ==================== SECTION 1: PATIENT VIEW ==================== -->
+    <section id="patientViewSection" class="view-section">
+      
+      <!-- Patient Navigation Subtabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-border-subtle); padding-bottom: 0.5rem; flex-wrap: wrap;">
+        <button class="btn patient-nav-tab" data-tab="search" style="background: var(--primary-light); color: var(--primary-hover);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Search & Compare Hospitals
+        </button>
+        <button class="btn patient-nav-tab" data-tab="ambulance" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+          Book & Track Ambulance
+        </button>
+        <button class="btn patient-nav-tab" data-tab="ai" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16.01"></line><line x1="16" y1="16" x2="16" y2="16.01"></line></svg>
+          AI Health Assistant
+        </button>
+        <button class="btn patient-nav-tab" data-tab="records" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          Digital Health Vault
+        </button>
+      </div>
+
+      <!-- SUBVIEW: Search & Compare -->
+      <div id="subview-search" class="patient-subview">
+        <div class="grid-patient-main">
+          
+          <!-- Left Search & Filter Sidebar -->
+          <aside>
+            <div class="card-panel">
+              <h3 style="margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Search & Filters (30,000+ Hospitals)
+              </h3>
+
+              <div class="form-group">
+                <label>Search Keyword</label>
+                <input type="text" class="form-control" id="searchInput" placeholder="Search Name, City, Specialty, Pincode...">
+              </div>
+
+              <div class="form-group">
+                <label>Select State</label>
+                <select class="form-select" id="stateSelect">
+                  <option value="all">All States & UTs</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Select District</label>
+                <select class="form-select" id="districtSelect">
+                  <option value="all">All Districts</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Hospital Sector</label>
+                <select class="form-select" id="hospitalTypeSelect">
+                  <option value="all">All Hospitals (Govt & Private)</option>
+                  <option value="government">Government Medical Colleges & Hospitals</option>
+                  <option value="private">Private Multi-Specialty Hospitals</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Treatment / Specialty</label>
+                <select class="form-select" id="treatmentFilterSelect">
+                  <option value="all">All Treatments & Procedures</option>
+                  <option value="Appendix Surgery">Appendix Surgery</option>
+                  <option value="Angioplasty">Angioplasty (Cardiology)</option>
+                  <option value="Cataract Operation">Cataract Operation</option>
+                  <option value="Normal Delivery">Normal Delivery (Maternity)</option>
+                  <option value="Knee Replacement">Knee Replacement</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Max Treatment Budget <span style="float: right; color: var(--primary); font-weight: 700;" id="budgetValueDisplay">₹2,00,000</span></label>
+                <input type="range" id="budgetSlider" min="15000" max="200000" step="5000" value="200000" style="width: 100%; accent-color: var(--primary);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                  <span>₹15,000</span>
+                  <span>₹2,00,000</span>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; color: var(--text-main); font-weight: 600;">
+                  <input type="checkbox" id="emergencyFilterCheck" style="width: 16px; height: 16px; accent-color: var(--primary);">
+                  Only show hospitals with ICU beds available
+                </label>
+              </div>
+
+              <button class="btn btn-outline" id="btnOpenCompareModal" style="width: 100%; font-size: 0.85rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"></path></svg>
+                Compare Selected Matrix
+              </button>
+            </div>
+          </aside>
+
+          <!-- Right Hospital Cards Feed -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 id="searchCountBadge" style="font-size: 1.1rem; color: var(--text-main);">Hospitals Available</h3>
+              
+              <!-- List / Map View Switcher -->
+              <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 6px;">
+                <button class="btn btn-primary" id="btnViewList" style="padding: 4px 12px; font-size: 0.8rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  List View
+                </button>
+                <button class="btn btn-outline" id="btnViewMap" style="padding: 4px 12px; font-size: 0.8rem; background: transparent; border: none; color: var(--text-muted);">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                  Hospital Map View
+                </button>
+              </div>
+            </div>
+
+            <!-- All Hospitals Interactive Map Canvas -->
+            <div id="allHospitalsMapCanvas" style="display: none; height: 480px; width: 100%; border-radius: 10px; border: 1px solid var(--light-border); margin-bottom: 1rem; z-index: 1;"></div>
+
+            <div class="hospital-list" id="hospitalListContainer">
+              <!-- Dynamically rendered via patient.js -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SUBVIEW: Book & Track Ambulance -->
+      <div id="subview-ambulance" class="patient-subview" style="display: none;">
+        <div class="grid-patient-main">
+          
+          <!-- Booking Form -->
+          <div class="card-panel">
+            <h3 style="margin-bottom: 1rem; font-size: 1.05rem;">Book Emergency Ambulance</h3>
+            
+            <div class="form-group">
+              <label>Ambulance Category</label>
+              <select class="form-select" id="ambTypeSelect">
+                <option value="Normal">Normal Ambulance (Basic Life Support) - ₹799 base</option>
+                <option value="ICU">ICU Ventilator Ambulance (Advanced) - ₹2,199 base</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Pickup Address</label>
+              <input type="text" class="form-control" value="H.No 45, Shastri Nagar, Meerut" id="ambPickupInput">
+            </div>
+
+            <div class="form-group">
+              <label>Destination Hospital</label>
+              <select class="form-select" id="ambDropHospitalSelect">
+                <option value="hosp-1">City Care Hospital (3.2 km away)</option>
+                <option value="hosp-2">Life Line Hospital (4.7 km away)</option>
+                <option value="hosp-4">Apex Heart & General Hospital (2.8 km away)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary" id="btnBookAmbulanceConfirm" style="width: 100%; margin-top: 1rem; padding: 10px;">
+              Confirm & Dispatch Ambulance
+            </button>
+          </div>
+
+          <!-- Live Tracking Map View -->
+          <div>
+            <div class="map-canvas-container">
+              <div class="eta-float-badge">
+                ETA: 12 Mins • Driver En Route
+              </div>
+              <div class="map-legend-overlay">
+                <div class="legend-item"><span class="legend-dot pickup"></span> Pickup Point</div>
+                <div class="legend-item"><span class="legend-dot hospital"></span> Hospital</div>
+                <div class="legend-item"><span class="legend-dot amb"></span> Ambulance GPS</div>
+              </div>
+              <div id="liveMapCanvas" style="width: 100%; height: 100%; min-height: 300px; z-index: 1;"></div>
+            </div>
+
+            <div class="card-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                  <h4 style="font-size: 1rem;">Assigned Ambulance: UP 15 AB 1234</h4>
+                  <p style="font-size: 0.85rem; color: var(--text-muted);">Driver: Ramesh Kumar • Contact: +91 91234 56789</p>
+                </div>
+                <button class="btn btn-outline" onclick="alert('Calling Driver Ramesh Kumar (+91 91234 56789)...')">
+                  Call Driver
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SUBVIEW: AI Health Assistant -->
+      <div id="subview-ai" class="patient-subview" style="display: none;">
+        <div class="card-panel" style="background: #0f172a; color: white;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
+            <div style="width: 40px; height: 40px; border-radius: 8px; background: #0284c7; display: flex; align-items: center; justify-content: center; color: white;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path></svg>
+            </div>
+            <div>
+              <h3 style="color: white; font-size: 1.1rem;">AI Clinical Guidance & Department Finder</h3>
+              <p style="font-size: 0.85rem; color: #94a3b8;">Describe your medical symptoms to identify the relevant specialty department and procedure cost estimates.</p>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem; display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; color: #cbd5e1;">Sample Queries:</span>
+            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Severe lower right abdominal pain</button>
+            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Chest tightness and arm pain</button>
+            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Cloudy vision and eye lens opacity</button>
+          </div>
+
+          <div class="ai-messages-box" id="aiMessagesBox" style="min-height: 200px; max-height: 350px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+            <div class="ai-msg bot" style="background: rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem;">
+              Hello! Describe your health symptoms (e.g. "knee joint pain" or "lower right abdominal discomfort") to receive department guidance and hospital cost estimates.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="aiInput" class="form-control" placeholder="Describe your symptoms here..." style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
+            <button class="btn btn-primary" id="aiSendBtn">Send Query</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBVIEW: Digital Health Records -->
+      <div id="subview-records" class="patient-subview" style="display: none;">
+        <div style="max-width: 800px; margin: 0 auto;">
+          <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Encrypted Digital Health Vault</h3>
+          <div id="healthRecordsContainer">
+            <!-- Rendered by app.js -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== SECTION 2: HOSPITAL ADMIN DASHBOARD ==================== -->
+    <section id="adminViewSection" class="view-section">
+      <div style="margin-bottom: 1.25rem;">
+        <h2 style="font-size: 1.35rem;">Hospital Operations Dashboard</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Manage live bed capacity (ICU/General/Emergency), emergency admissions, and treatment tariff prices.</p>
+      </div>
+
+      <div id="hospitalAdminContainer">
+        <!-- Rendered by hospital.js -->
+      </div>
+    </section>
+
+    <!-- ==================== SECTION 3: AMBULANCE DRIVER VIEW ==================== -->
+    <section id="driverViewSection" class="view-section">
+      <div style="max-width: 880px; margin: 0 auto;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.35rem;">Ambulance Driver Live Terminal</h2>
+        <div class="card-panel" style="margin-bottom: 1.25rem; border-left: 4px solid var(--primary);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h3 style="font-size: 1.05rem;">Active Order #BK-9021</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Patient: Rahul Sharma • Pickup: Shastri Nagar, Meerut</p>
+            </div>
+            <span class="badge-tag" style="background: #dcfce7; color: #15803d;">En Route to Pickup</span>
+          </div>
+        </div>
+
+        <div class="map-canvas-container" style="height: 350px;">
+          <div class="eta-float-badge">
+            GPS Active • Pickup Distance 4.2 km
+          </div>
+          <div id="driverLiveMapCanvas" style="width: 100%; height: 100%; min-height: 300px; z-index: 1;"></div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button class="btn btn-primary" style="flex: 1;" onclick="alert('Status updated: Patient Boarded Ambulance!')">
+            Confirm Patient Picked Up
+          </button>
+          <button class="btn btn-outline" style="flex: 1;" onclick="alert('Navigating to Emergency Bay...')">
+            Navigate to Emergency Bay
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Comparison Matrix Modal Dialog -->
+  <div class="modal-backdrop" id="compareModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem;">Hospital Side-by-Side Comparison Matrix</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div id="compareModalBody">
+        <!-- Rendered via patient.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
