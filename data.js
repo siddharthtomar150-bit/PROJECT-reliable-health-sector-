@@ -260,6 +260,90 @@ export const SYMPTOM_DATABASE = [
   }
 ];
 
+// Comprehensive Disease & Symptom Reference Database
+export const DISEASE_DATABASE = [
+  {
+    disease: "Common Cold",
+    symptoms: ["runny nose", "sneezing", "sore throat", "cough"],
+    department: "General Medicine",
+    severity: "Low",
+    emergency: false,
+    specialist: "Physician"
+  },
+  {
+    disease: "Influenza (Flu)",
+    symptoms: ["fever", "body pain", "cough", "fatigue"],
+    department: "General Medicine",
+    severity: "Medium",
+    emergency: false,
+    specialist: "Physician"
+  },
+  {
+    disease: "Dengue",
+    symptoms: ["fever", "body pain", "headache", "rash"],
+    department: "General Medicine",
+    severity: "High",
+    emergency: false,
+    specialist: "Physician"
+  },
+  {
+    disease: "Malaria",
+    symptoms: ["fever", "chills", "sweating", "headache"],
+    department: "General Medicine",
+    severity: "High",
+    emergency: false,
+    specialist: "Physician"
+  },
+  {
+    disease: "Typhoid",
+    symptoms: ["high fever", "abdominal pain", "weakness", "loss of appetite"],
+    department: "General Medicine",
+    severity: "High",
+    emergency: false,
+    specialist: "Physician"
+  },
+  {
+    disease: "Diabetes",
+    symptoms: ["frequent urination", "increased thirst", "fatigue", "weight loss"],
+    department: "Endocrinology",
+    severity: "Medium",
+    emergency: false,
+    specialist: "Endocrinologist"
+  },
+  {
+    disease: "Hypertension",
+    symptoms: ["headache", "dizziness", "blurred vision", "chest pain"],
+    department: "Cardiology",
+    severity: "Medium",
+    emergency: false,
+    specialist: "Cardiologist"
+  },
+  {
+    disease: "Asthma",
+    symptoms: ["shortness of breath", "wheezing", "chest tightness", "cough"],
+    department: "Pulmonology",
+    severity: "Medium",
+    emergency: true,
+    specialist: "Pulmonologist"
+  },
+  {
+    disease: "Migraine",
+    symptoms: ["headache", "nausea", "light sensitivity", "vomiting"],
+    department: "Neurology",
+    severity: "Medium",
+    emergency: false,
+    specialist: "Neurologist"
+  },
+  {
+    disease: "Kidney Stones",
+    symptoms: ["severe back pain", "painful urination", "blood in urine", "nausea"],
+    department: "Urology",
+    severity: "High",
+    emergency: true,
+    specialist: "Urologist"
+  }
+];
+
 export const INITIAL_BOOKINGS = [
   {
     id: "BK-9021",

@@ -11,7 +11,13 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
     if (emergencyOnly && !h.emergencyAvailable) return false;
     if (h.estimatedAvgCost > maxBudget) return false;
     if (activeTreatment !== 'all') {
-      const hasTreatment = h.treatments.some(t => t.id === activeTreatment || t.name.toLowerCase().includes(activeTreatment.toLowerCase()));
+      const query = activeTreatment.toLowerCase();
+      const hasTreatment = h.treatments.some(t => 
+        (t.id && t.id.toLowerCase() === query) || 
+        (t.name && t.name.toLowerCase().includes(query)) || 
+        (t.category && t.category.toLowerCase().includes(query))
+      ) || (h.specialties && h.specialties.toLowerCase().includes(query))
+        || (h.tagline && h.tagline.toLowerCase().includes(query));
       if (!hasTreatment) return false;
     }
     return true;

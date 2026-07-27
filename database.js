@@ -209,9 +209,21 @@ export async function initDb() {
         type TEXT,
         summary TEXT,
         file_ref TEXT,
+        blood_group TEXT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Schema migrations for existing database
+    const userCols = await dbAll("PRAGMA table_info(users)");
+    const userColNames = userCols.map(c => c.name);
+    if (!userColNames.includes('blood_group')) await dbRun('ALTER TABLE users ADD COLUMN blood_group TEXT');
+    if (!userColNames.includes('emergency_contact')) await dbRun('ALTER TABLE users ADD COLUMN emergency_contact TEXT');
+    if (!userColNames.includes('allergies')) await dbRun('ALTER TABLE users ADD COLUMN allergies TEXT');
+
+    const recCols = await dbAll("PRAGMA table_info(health_records)");
+    const recColNames = recCols.map(c => c.name);
+    if (!recColNames.includes('blood_group')) await dbRun('ALTER TABLE health_records ADD COLUMN blood_group TEXT');
 
     // Check if default users exist
     const userCount = await dbGet('SELECT COUNT(*) as count FROM users');

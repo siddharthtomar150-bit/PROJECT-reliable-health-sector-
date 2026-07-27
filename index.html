@@ -236,12 +236,44 @@
               <div class="form-group">
                 <label>Treatment / Specialty</label>
                 <select class="form-select" id="treatmentFilterSelect">
-                  <option value="all">All Treatments & Procedures</option>
-                  <option value="Appendix Surgery">Appendix Surgery</option>
-                  <option value="Angioplasty">Angioplasty (Cardiology)</option>
-                  <option value="Cataract Operation">Cataract Operation</option>
-                  <option value="Normal Delivery">Normal Delivery (Maternity)</option>
-                  <option value="Knee Replacement">Knee Replacement</option>
+                  <option value="all">All Treatments & Medical Specialties</option>
+                  
+                  <optgroup label="🩺 Medical Specialties & Departments">
+                    <option value="General Medicine">General Medicine & Fever</option>
+                    <option value="Cardiology">Cardiology (Heart Care)</option>
+                    <option value="General Surgery">General Surgery</option>
+                    <option value="Orthopedics">Orthopedics (Bone & Joint)</option>
+                    <option value="Ophthalmology">Ophthalmology (Eye Care)</option>
+                    <option value="Pulmonology">Pulmonology (Lung & Respiratory)</option>
+                    <option value="Neurology">Neurology (Brain & Spine)</option>
+                    <option value="Urology">Urology (Kidney & Urinary)</option>
+                    <option value="Endocrinology">Endocrinology (Diabetes & Hormones)</option>
+                    <option value="Maternity">Maternity & Gynecology</option>
+                    <option value="Gastroenterology">Gastroenterology (Digestive Care)</option>
+                    <option value="Oncology">Oncology (Cancer Treatment)</option>
+                    <option value="Nephrology">Nephrology (Kidney Dialysis)</option>
+                    <option value="Pediatrics">Pediatrics (Child Care)</option>
+                    <option value="Dermatology">Dermatology (Skin Care)</option>
+                    <option value="ENT">ENT (Ear, Nose & Throat)</option>
+                    <option value="Psychiatry">Psychiatry & Mental Health</option>
+                    <option value="Dental">Dental Care & Oral Surgery</option>
+                    <option value="AYUSH">AYUSH / Ayurveda / Homeopathy</option>
+                  </optgroup>
+
+                  <optgroup label="🏥 Surgical & Medical Procedures">
+                    <option value="Appendix Surgery">Appendix Surgery (Laparoscopic)</option>
+                    <option value="Angioplasty">Angioplasty & Stenting (Cardiac)</option>
+                    <option value="Cataract Operation">Cataract Operation (Phaco)</option>
+                    <option value="Normal Delivery">Normal Delivery / C-Section</option>
+                    <option value="Knee Replacement">Knee / Joint Replacement</option>
+                    <option value="Dialysis">Kidney Dialysis Procedure</option>
+                    <option value="Gallbladder Surgery">Gallbladder Surgery (Cholecystectomy)</option>
+                    <option value="Hernia Surgery">Hernia Repair Surgery</option>
+                    <option value="Kidney Stone Removal">Kidney Stone Removal (Lithotripsy)</option>
+                    <option value="Asthma Care">Asthma & COPD Management</option>
+                    <option value="Chemotherapy">Cancer Chemotherapy</option>
+                    <option value="CT / MRI Scan">Advanced Imaging (CT / MRI Scan)</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -375,11 +407,22 @@
             </div>
           </div>
 
-          <div style="margin-bottom: 1rem; display: flex; gap: 8px; flex-wrap: wrap;">
-            <span style="font-size: 0.8rem; color: #cbd5e1;">Sample Queries:</span>
-            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Severe lower right abdominal pain</button>
-            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Chest tightness and arm pain</button>
-            <button class="btn btn-outline ai-preset-chip" style="padding: 2px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Cloudy vision and eye lens opacity</button>
+          <div style="margin-bottom: 1rem;">
+            <span style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 8px;">🩺 Quick Symptom Queries:</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">runny nose and sneezing</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">fever body pain fatigue</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">fever headache rash</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">fever chills sweating</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">high fever abdominal pain weakness</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">frequent urination increased thirst</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">headache dizziness blurred vision</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">shortness of breath wheezing</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">headache nausea light sensitivity</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">severe back pain painful urination</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Chest tightness and arm pain</button>
+              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Severe lower right abdominal pain</button>
+            </div>
           </div>
 
           <div class="ai-messages-box" id="aiMessagesBox" style="min-height: 200px; max-height: 350px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.1);">
@@ -397,11 +440,137 @@
 
       <!-- SUBVIEW: Digital Health Records -->
       <div id="subview-records" class="patient-subview" style="display: none;">
-        <div style="max-width: 800px; margin: 0 auto;">
-          <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Encrypted Digital Health Vault</h3>
+        <div style="max-width: 850px; margin: 0 auto;">
+          
+          <!-- Patient Blood Group & Emergency Profile Card -->
+          <div class="card-panel" style="margin-bottom: 1.5rem; border-left: 4px solid #ef4444;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background: #fef2f2; border: 2px solid #ef4444; color: #dc2626; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem;">
+                  🩸
+                </div>
+                <div>
+                  <h3 style="font-size: 1.1rem; color: var(--text-main);">Patient Emergency Medical Profile</h3>
+                  <p style="font-size: 0.82rem; color: var(--text-muted);">Blood group & emergency contacts linked to your digital health vault</p>
+                </div>
+              </div>
+              <span id="badgeProfileBloodGroup" style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.9rem;">
+                Blood Group: O+
+              </span>
+            </div>
+
+            <form id="formPatientProfile" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div class="form-group">
+                <label>Select Blood Group</label>
+                <select id="profileBloodGroup" class="form-select" style="font-weight: 700;">
+                  <option value="O+">O Positive (O+)</option>
+                  <option value="O-">O Negative (O-)</option>
+                  <option value="A+">A Positive (A+)</option>
+                  <option value="A-">A Negative (A-)</option>
+                  <option value="B+">B Positive (B+)</option>
+                  <option value="B-">B Negative (B-)</option>
+                  <option value="AB+">AB Positive (AB+)</option>
+                  <option value="AB-">AB Negative (AB-)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Emergency Contact Phone</label>
+                <input type="text" id="profileEmergencyContact" class="form-control" placeholder="+91 98123 45678">
+              </div>
+
+              <div class="form-group">
+                <label>Known Allergies / Chronic Conditions</label>
+                <input type="text" id="profileAllergies" class="form-control" placeholder="Penicillin allergy, Asthma, Diabetes">
+              </div>
+
+              <div style="grid-column: 1 / -1; text-align: right;">
+                <button type="submit" class="btn btn-primary" style="padding: 8px 18px; font-size: 0.85rem;">
+                  💾 Save Health Profile
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Digital Health Vault Header & Add Record Button -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1.1rem; color: var(--text-main);">Encrypted Health Vault & Lab Reports</h3>
+            <button class="btn btn-primary" id="btnToggleAddRecord" style="font-size: 0.85rem;">
+              ➕ Add New Health Record
+            </button>
+          </div>
+
+          <!-- Collapsible Add Health Record Form -->
+          <div id="addRecordPanel" style="display: none; background: white; border: 1px solid var(--light-border); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; box-shadow: var(--shadow-sm);">
+            <h4 style="font-size: 1rem; margin-bottom: 1rem; color: var(--primary);">Upload / Enter New Digital Medical Record</h4>
+            <form id="formAddHealthRecord" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+              <div class="form-group">
+                <label>Report / Document Title</label>
+                <input type="text" id="recordTitle" class="form-control" placeholder="e.g. Complete Blood Count & Lipid Profile" required>
+              </div>
+
+              <div class="form-group">
+                <label>Hospital / Clinic Name</label>
+                <input type="text" id="recordHospital" class="form-control" placeholder="e.g. AIIMS New Delhi" required>
+              </div>
+
+              <div class="form-group">
+                <label>Doctor Name</label>
+                <input type="text" id="recordDoctor" class="form-control" placeholder="e.g. Dr. Randeep Guleria">
+              </div>
+
+              <div class="form-group">
+                <label>Record Date</label>
+                <input type="date" id="recordDate" class="form-control" required>
+              </div>
+
+              <div class="form-group">
+                <label>Report Type</label>
+                <select id="recordType" class="form-select">
+                  <option value="Blood Test / Lab Report">Blood Test / Lab Report</option>
+                  <option value="Imaging Scan (X-Ray / MRI / CT)">Imaging Scan (X-Ray / MRI / CT)</option>
+                  <option value="Doctor Prescription">Doctor Prescription</option>
+                  <option value="Discharge Summary">Discharge Summary</option>
+                  <option value="Vaccination Certificate">Vaccination Certificate</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Blood Group Reference</label>
+                <select id="recordBloodGroup" class="form-select">
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Summary / Key Medical Observations</label>
+                <textarea id="recordSummary" class="form-control" rows="2" placeholder="Enter key diagnosis, normal/abnormal test results, or doctor recommendations..."></textarea>
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>File Reference Name / Attachment</label>
+                <input type="text" id="recordFileRef" class="form-control" placeholder="lab_report_cbc_2026.pdf">
+              </div>
+
+              <div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end;">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('addRecordPanel').style.display='none'">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">Save Record to Vault</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Container where health records are rendered -->
           <div id="healthRecordsContainer">
             <!-- Rendered by app.js -->
           </div>
+
         </div>
       </div>
 

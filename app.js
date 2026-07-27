@@ -156,6 +156,27 @@ function updateViews() {
   }
 }
 
+// Load Patient User Profile (Blood Group, Emergency Contact, Allergies)
+async function loadUserProfile() {
+  try {
+    const res = await fetch('/api/user/profile', { headers: getAuthHeaders() });
+    if (res.ok) {
+      const user = await res.json();
+      const bloodSelect = document.getElementById('profileBloodGroup');
+      const contactInput = document.getElementById('profileEmergencyContact');
+      const allergiesInput = document.getElementById('profileAllergies');
+      const badgeBlood = document.getElementById('badgeProfileBloodGroup');
+
+      if (bloodSelect && user.blood_group) bloodSelect.value = user.blood_group;
+      if (contactInput && user.emergency_contact) contactInput.value = user.emergency_contact;
+      if (allergiesInput && user.allergies) allergiesInput.value = user.allergies;
+      if (badgeBlood) badgeBlood.textContent = `Blood Group: ${user.blood_group || 'O+'}`;
+    }
+  } catch (err) {
+    console.error('Error loading user profile:', err);
+  }
+}
+
 // Render Health Records for logged-in user
 async function loadHealthRecords() {
   const container = document.getElementById('healthRecordsContainer');
@@ -178,17 +199,27 @@ async function loadHealthRecords() {
 
     container.innerHTML = records.map(rec => `
       <div class="card-panel" style="margin-bottom: 1rem; border-left: 4px solid var(--primary);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <h4 style="font-size: 1.1rem; color: var(--text-main);">${rec.title}</h4>
             <p style="font-size: 0.85rem; color: var(--text-muted);">${rec.hospital} • ${rec.doctor} • 📅 ${rec.date}</p>
           </div>
-          <span class="badge-tag">${rec.type}</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800; font-size: 0.78rem; padding: 2px 8px; border-radius: 4px;">
+              🩸 ${rec.blood_group || 'O+'}
+            </span>
+            <span class="badge-tag">${rec.type}</span>
+          </div>
         </div>
         <p style="margin: 0.75rem 0; font-size: 0.9rem; color: var(--text-main);">${rec.summary}</p>
-        <button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick="alert('Downloading ${rec.file_ref} encrypted health record...')">
-          📥 Download Digital Copy
-        </button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+          <button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick="alert('Downloading ${rec.file_ref || 'medical_report.pdf'} encrypted health record...')">
+            📥 Download Digital Copy (${rec.file_ref || 'report.pdf'})
+          </button>
+          <button class="btn btn-outline btn-delete-record" style="padding: 4px 10px; font-size: 0.78rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" data-id="${rec.id}">
+            🗑️ Delete
+          </button>
+        </div>
       </div>
     `).join('');
   } catch (err) {
@@ -274,6 +305,7 @@ async function loadDashboardData() {
   await fetchHospitals();
   updateViews();
   if (state.activeRole === 'patient') {
+    loadUserProfile();
     loadHealthRecords();
   }
 }
@@ -785,4 +817,262 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // ==================== PATIENT PROFILE & HEALTH VAULT LISTENERS ====================
+
+  // Toggle Add Record Panel
+  const btnToggleAddRecord = document.getElementById('btnToggleAddRecord');
+  const addRecordPanel = document.getElementById('addRecordPanel');
+  if (btnToggleAddRecord && addRecordPanel) {
+    btnToggleAddRecord.addEventListener('click', () => {
+      addRecordPanel.style.display = addRecordPanel.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+
+  // Submit Patient Profile (Blood Group, Emergency Contact, Allergies)
+  const formPatientProfile = document.getElementById('formPatientProfile');
+  if (formPatientProfile) {
+    formPatientProfile.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const bloodGroup = document.getElementById('profileBloodGroup').value;
+      const emergencyContact = document.getElementById('profileEmergencyContact').value;
+      const allergies = document.getElementById('profileAllergies').value;
+
+      try {
+        const res = await fetch('/api/user/profile', {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ bloodGroup, emergencyContact, allergies })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('🩸 Patient Medical Profile & Blood Group updated!', 'success');
+          const badgeBlood = document.getElementById('badgeProfileBloodGroup');
+          if (badgeBlood) badgeBlood.textContent = `Blood Group: ${bloodGroup}`;
+        } else {
+          showToast(data.error || 'Failed to update profile', 'danger');
+        }
+      } catch (err) {
+        console.error('Error updating profile:', err);
+        showToast('Server communication error', 'danger');
+      }
+    });
+  }
+
+  // Submit New Health Record
+  const formAddHealthRecord = document.getElementById('formAddHealthRecord');
+  if (formAddHealthRecord) {
+    formAddHealthRecord.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('recordTitle').value;
+      const hospital = document.getElementById('recordHospital').value;
+      const doctor = document.getElementById('recordDoctor').value;
+      const date = document.getElementById('recordDate').value;
+      const type = document.getElementById('recordType').value;
+      const bloodGroup = document.getElementById('recordBloodGroup').value;
+      const summary = document.getElementById('recordSummary').value;
+      const fileRef = document.getElementById('recordFileRef').value;
+
+      try {
+        const res = await fetch('/api/records', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ title, hospital, doctor, date, type, bloodGroup, summary, fileRef })
+        });
+
+        if (res.ok) {
+          showToast('📄 Medical record saved to digital vault!', 'success');
+          formAddHealthRecord.reset();
+          if (addRecordPanel) addRecordPanel.style.display = 'none';
+          loadHealthRecords();
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to save record', 'danger');
+        }
+      } catch (err) {
+        console.error('Error saving record:', err);
+        showToast('Server communication error', 'danger');
+      }
+    });
+  }
+
+  // ==================== HOSPITAL ADMIN DASHBOARD LISTENERS ====================
+
+  // Toggle Hospital Settings Panel
+  document.body.addEventListener('click', async (e) => {
+    if (e.target.closest('#btnToggleHospSettings')) {
+      const panel = document.getElementById('hospSettingsPanel');
+      if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    if (e.target.closest('#btnToggleAddTreatment')) {
+      const panel = document.getElementById('addTreatmentPanel');
+      if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    if (e.target.closest('#btnToggleAddDoctor')) {
+      const panel = document.getElementById('addDoctorPanel');
+      if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Delete Health Record
+    if (e.target.closest('.btn-delete-record')) {
+      const recId = e.target.closest('.btn-delete-record').dataset.id;
+      if (confirm('Are you sure you want to delete this health record from your vault?')) {
+        try {
+          const res = await fetch(`/api/records/${recId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          });
+          if (res.ok) {
+            showToast('Health record removed from vault', 'success');
+            loadHealthRecords();
+          } else {
+            showToast('Failed to delete record', 'danger');
+          }
+        } catch (err) {
+          showToast('Server error', 'danger');
+        }
+      }
+    }
+
+    // Delete Treatment (Admin)
+    if (e.target.closest('.btn-delete-treatment')) {
+      const btn = e.target.closest('.btn-delete-treatment');
+      const hospId = btn.dataset.hosp;
+      const treatId = btn.dataset.treat;
+
+      if (confirm('Delete this procedure from hospital tariff list?')) {
+        try {
+          const res = await fetch(`/api/hospitals/${hospId}/treatments/${treatId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          });
+          if (res.ok) {
+            showToast('Procedure deleted successfully', 'success');
+            await fetchHospitals();
+            updateViews();
+          } else {
+            showToast('Failed to delete treatment', 'danger');
+          }
+        } catch (err) {
+          showToast('Server communication error', 'danger');
+        }
+      }
+    }
+
+    // Delete Doctor (Admin)
+    if (e.target.closest('.btn-delete-doctor')) {
+      const btn = e.target.closest('.btn-delete-doctor');
+      const hospId = btn.dataset.hosp;
+      const docId = btn.dataset.doc;
+
+      if (confirm('Remove this doctor from hospital roster?')) {
+        try {
+          const res = await fetch(`/api/hospitals/${hospId}/doctors/${docId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          });
+          if (res.ok) {
+            showToast('Doctor removed from roster', 'success');
+            await fetchHospitals();
+            updateViews();
+          } else {
+            showToast('Failed to remove doctor', 'danger');
+          }
+        } catch (err) {
+          showToast('Server communication error', 'danger');
+        }
+      }
+    }
+  });
+
+  // Submit Hospital Settings
+  document.body.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'formHospSettings') {
+      e.preventDefault();
+      const hospId = state.activeAdminHospitalId;
+      const tagline = document.getElementById('settingTagline').value;
+      const phone = document.getElementById('settingPhone').value;
+      const opdWaitTimeMins = document.getElementById('settingOpdWait').value;
+      const emergencyAvailable = document.getElementById('settingEmergency').checked;
+
+      try {
+        const res = await fetch(`/api/hospitals/${hospId}/settings`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ tagline, phone, opdWaitTimeMins, emergencyAvailable })
+        });
+        if (res.ok) {
+          showToast('Hospital settings & OPD status updated!', 'success');
+          await fetchHospitals();
+          updateViews();
+        } else {
+          showToast('Failed to update hospital settings', 'danger');
+        }
+      } catch (err) {
+        showToast('Server communication error', 'danger');
+      }
+    }
+
+    // Submit Add Treatment
+    if (e.target && e.target.id === 'formAddTreatment') {
+      e.preventDefault();
+      const hospId = state.activeAdminHospitalId;
+      const name = document.getElementById('newTreatName').value;
+      const category = document.getElementById('newTreatCategory').value;
+      const cost = document.getElementById('newTreatCost').value;
+      const duration = document.getElementById('newTreatDuration').value;
+
+      try {
+        const res = await fetch(`/api/hospitals/${hospId}/treatments`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ name, category, cost, duration })
+        });
+        if (res.ok) {
+          showToast(`Procedure "${name}" added to hospital tariff!`, 'success');
+          document.getElementById('formAddTreatment').reset();
+          document.getElementById('addTreatmentPanel').style.display = 'none';
+          await fetchHospitals();
+          updateViews();
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to add treatment', 'danger');
+        }
+      } catch (err) {
+        showToast('Server communication error', 'danger');
+      }
+    }
+
+    // Submit Add Doctor
+    if (e.target && e.target.id === 'formAddDoctor') {
+      e.preventDefault();
+      const hospId = state.activeAdminHospitalId;
+      const name = document.getElementById('newDocName').value;
+      const spec = document.getElementById('newDocSpec').value;
+      const exp = document.getElementById('newDocExp').value;
+      const status = document.getElementById('newDocStatus').value;
+
+      try {
+        const res = await fetch(`/api/hospitals/${hospId}/doctors`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ name, spec, exp, status })
+        });
+        if (res.ok) {
+          showToast(`${name} added to hospital roster!`, 'success');
+          document.getElementById('formAddDoctor').reset();
+          document.getElementById('addDoctorPanel').style.display = 'none';
+          await fetchHospitals();
+          updateViews();
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to add doctor', 'danger');
+        }
+      } catch (err) {
+        showToast('Server communication error', 'danger');
+      }
+    }
+  });
 });

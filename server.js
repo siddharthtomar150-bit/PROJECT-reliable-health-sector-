@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { initDb, dbGet, dbAll, dbRun } from './database.js';
-import { SYMPTOM_DATABASE } from './data.js';
+import { SYMPTOM_DATABASE, DISEASE_DATABASE } from './data.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = 'healthrought_super_secret_jwt_key_2026';
@@ -354,6 +354,159 @@ app.put('/api/hospitals/:id/treatments/:treatmentId', authenticateToken, async (
   }
 });
 
+// Add New Treatment (Admin only)
+app.post('/api/hospitals/:id/treatments', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, category, cost, duration } = req.body;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  if (!name || !cost) {
+    return res.status(400).json({ error: 'Treatment name and cost are required.' });
+  }
+
+  try {
+    const treatId = `t-${Date.now()}`;
+    await dbRun(
+      'INSERT INTO treatments (id, hospital_id, name, category, cost, duration) VALUES (?, ?, ?, ?, ?, ?)',
+      [treatId, id, name, category || 'General Care', parseInt(cost, 10), duration || 'Day care']
+    );
+
+    // Update estimated average cost
+    const treatments = await dbAll('SELECT cost FROM treatments WHERE hospital_id = ?', [id]);
+    const avgCost = Math.round(treatments.reduce((sum, t) => sum + t.cost, 0) / treatments.length);
+    await dbRun('UPDATE hospitals SET estimated_avg_cost = ? WHERE id = ?', [avgCost, id]);
+
+    res.status(201).json({ id: treatId, name, category, cost: parseInt(cost, 10), duration, newAverageCost: avgCost });
+  } catch (err) {
+    console.error('Error adding treatment:', err);
+    res.status(500).json({ error: 'Failed to add treatment.' });
+  }
+});
+
+// Delete Treatment (Admin only)
+app.delete('/api/hospitals/:id/treatments/:treatmentId', authenticateToken, async (req, res) => {
+  const { id, treatmentId } = req.params;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  try {
+    await dbRun('DELETE FROM treatments WHERE id = ? AND hospital_id = ?', [treatmentId, id]);
+    res.json({ message: 'Treatment removed successfully.' });
+  } catch (err) {
+    console.error('Error deleting treatment:', err);
+    res.status(500).json({ error: 'Failed to delete treatment.' });
+  }
+});
+
+// Add New Doctor (Admin only)
+app.post('/api/hospitals/:id/doctors', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, spec, exp, status } = req.body;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  if (!name || !spec) {
+    return res.status(400).json({ error: 'Doctor name and specialty are required.' });
+  }
+
+  try {
+    const result = await dbRun(
+      'INSERT INTO doctors (hospital_id, name, spec, exp, status) VALUES (?, ?, ?, ?, ?)',
+      [id, name, spec, exp || '5 yrs', status || 'Available']
+    );
+
+    res.status(201).json({ id: result.id, name, spec, exp, status });
+  } catch (err) {
+    console.error('Error adding doctor:', err);
+    res.status(500).json({ error: 'Failed to add doctor.' });
+  }
+});
+
+// Delete Doctor (Admin only)
+app.delete('/api/hospitals/:id/doctors/:doctorId', authenticateToken, async (req, res) => {
+  const { id, doctorId } = req.params;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  try {
+    await dbRun('DELETE FROM doctors WHERE id = ? AND hospital_id = ?', [doctorId, id]);
+    res.json({ message: 'Doctor removed from roster.' });
+  } catch (err) {
+    console.error('Error deleting doctor:', err);
+    res.status(500).json({ error: 'Failed to remove doctor.' });
+  }
+});
+
+// Update Hospital Settings (Admin only)
+app.put('/api/hospitals/:id/settings', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { tagline, phone, emergencyAvailable, opdWaitTimeMins } = req.body;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  try {
+    await dbRun(`
+      UPDATE hospitals SET tagline = ?, phone = ?, emergency_available = ?, opd_wait_time_mins = ?
+      WHERE id = ?
+    `, [tagline, phone, emergencyAvailable ? 1 : 0, parseInt(opdWaitTimeMins, 10) || 15, id]);
+
+    res.json({ message: 'Hospital settings updated successfully.' });
+  } catch (err) {
+    console.error('Error updating hospital settings:', err);
+    res.status(500).json({ error: 'Failed to update hospital settings.' });
+  }
+});
+
+// Add Hospital Facility (Admin only)
+app.post('/api/hospitals/:id/facilities', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { facility } = req.body;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  if (!facility || !facility.trim()) {
+    return res.status(400).json({ error: 'Facility name is required.' });
+  }
+
+  try {
+    await dbRun('INSERT OR IGNORE INTO facilities (hospital_id, facility) VALUES (?, ?)', [id, facility.trim()]);
+    res.status(201).json({ message: 'Facility added successfully.', facility: facility.trim() });
+  } catch (err) {
+    console.error('Error adding facility:', err);
+    res.status(500).json({ error: 'Failed to add facility.' });
+  }
+});
+
+// Delete Hospital Facility (Admin only)
+app.delete('/api/hospitals/:id/facilities/:facility', authenticateToken, async (req, res) => {
+  const { id, facility } = req.params;
+
+  if (req.user.role !== 'admin' || req.user.hospitalId !== id) {
+    return res.status(403).json({ error: 'Permission denied.' });
+  }
+
+  try {
+    await dbRun('DELETE FROM facilities WHERE hospital_id = ? AND facility = ?', [id, decodeURIComponent(facility)]);
+    res.json({ message: 'Facility removed successfully.' });
+  } catch (err) {
+    console.error('Error deleting facility:', err);
+    res.status(500).json({ error: 'Failed to delete facility.' });
+  }
+});
+
 // ==================== BOOKINGS API ====================
 
 // Get bookings based on user role
@@ -447,6 +600,37 @@ app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
 
 // ==================== HEALTH RECORDS API ====================
 
+// ==================== HEALTH RECORDS & USER PROFILE API ====================
+
+// Get patient user profile (with blood group, emergency contact, allergies)
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await dbGet('SELECT id, name, email, role, hospital_id, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
+    res.json(user);
+  } catch (err) {
+    console.error('Error fetching user profile:', err);
+    res.status(500).json({ error: 'Failed to fetch user profile.' });
+  }
+});
+
+// Update patient user profile (blood_group, emergency_contact, allergies)
+app.put('/api/user/profile', authenticateToken, async (req, res) => {
+  const { bloodGroup, emergencyContact, allergies } = req.body;
+
+  try {
+    await dbRun(`
+      UPDATE users SET blood_group = ?, emergency_contact = ?, allergies = ?
+      WHERE id = ?
+    `, [bloodGroup, emergencyContact, allergies, req.user.id]);
+
+    const updatedUser = await dbGet('SELECT id, name, email, role, hospital_id, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
+    res.json({ message: 'Profile updated successfully.', user: updatedUser });
+  } catch (err) {
+    console.error('Error updating user profile:', err);
+    res.status(500).json({ error: 'Failed to update user profile.' });
+  }
+});
+
 // Get health records for patient
 app.get('/api/records', authenticateToken, async (req, res) => {
   if (req.user.role !== 'patient') {
@@ -454,11 +638,60 @@ app.get('/api/records', authenticateToken, async (req, res) => {
   }
 
   try {
-    const records = await dbAll('SELECT * FROM health_records WHERE user_id = ?', [req.user.id]);
+    const records = await dbAll('SELECT * FROM health_records WHERE user_id = ? ORDER BY date DESC', [req.user.id]);
     res.json(records);
   } catch (err) {
     console.error('Error fetching records:', err);
     res.status(500).json({ error: 'Failed to retrieve digital health records.' });
+  }
+});
+
+// Add new health record (Patient or Admin)
+app.post('/api/records', authenticateToken, async (req, res) => {
+  const { title, hospital, doctor, type, summary, date, bloodGroup, fileRef } = req.body;
+
+  if (!title || !hospital) {
+    return res.status(400).json({ error: 'Record title and hospital name are required.' });
+  }
+
+  try {
+    const recordId = `REC-${Math.floor(100 + Math.random() * 900)}`;
+    const recordDate = date || new Date().toISOString().slice(0, 10);
+
+    await dbRun(`
+      INSERT INTO health_records (id, user_id, date, title, hospital, doctor, type, summary, file_ref, blood_group)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      recordId,
+      req.user.id,
+      recordDate,
+      title,
+      hospital,
+      doctor || 'Primary Care Physician',
+      type || 'General Medical Report',
+      summary || 'Digital health record stored securely.',
+      fileRef || 'health_report.pdf',
+      bloodGroup || 'O+'
+    ]);
+
+    const newRecord = await dbGet('SELECT * FROM health_records WHERE id = ?', [recordId]);
+    res.status(201).json(newRecord);
+  } catch (err) {
+    console.error('Error adding health record:', err);
+    res.status(500).json({ error: 'Failed to add health record.' });
+  }
+});
+
+// Delete health record
+app.delete('/api/records/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await dbRun('DELETE FROM health_records WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    res.json({ message: 'Record deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting health record:', err);
+    res.status(500).json({ error: 'Failed to delete health record.' });
   }
 });
 
@@ -472,27 +705,86 @@ app.post('/api/symptoms/check', async (req, res) => {
     return res.status(400).json({ error: 'Query is required.' });
   }
 
-  const match = SYMPTOM_DATABASE.find(s => 
-    s.symptom.toLowerCase().includes(query.toLowerCase()) || 
-    query.toLowerCase().includes(s.suggestedTreatment.toLowerCase())
+  const queryLower = query.toLowerCase();
+
+  // --- Step 1: Score each disease by how many of its symptoms appear in the query ---
+  const diseaseScores = DISEASE_DATABASE.map(d => {
+    const matchedSymptoms = d.symptoms.filter(s => queryLower.includes(s.toLowerCase()));
+    // Also match by disease name
+    const nameMatch = queryLower.includes(d.disease.toLowerCase()) ? 2 : 0;
+    return { ...d, score: matchedSymptoms.length + nameMatch, matchedSymptoms };
+  }).filter(d => d.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  // --- Step 2: Check legacy SYMPTOM_DATABASE for procedure-level matches ---
+  const legacyMatch = SYMPTOM_DATABASE.find(s =>
+    s.symptom.toLowerCase().includes(queryLower) ||
+    queryLower.includes(s.suggestedTreatment.toLowerCase())
   );
 
-  if (match) {
+  // --- Step 3: Build response ---
+  if (diseaseScores.length > 0) {
+    const severityColor = { Low: '#22c55e', Medium: '#f59e0b', High: '#ef4444' };
+    const emergencyBanner = diseaseScores.some(d => d.emergency)
+      ? `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 0.85rem; color: #dc2626; font-weight: 600;">⚠️ One or more conditions may require <strong>emergency care</strong>. If symptoms are severe, use the 🚨 SOS button immediately.</div>`
+      : '';
+
+    const diseasePills = diseaseScores.slice(0, 3).map(d => {
+      const color = severityColor[d.severity] || '#64748b';
+      const emergencyTag = d.emergency
+        ? `<span style="margin-left: 6px; background: #fef2f2; color: #dc2626; padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">🚨 EMERGENCY RISK</span>`
+        : '';
+      return `
+        <div style="background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+            <strong style="font-size: 0.95rem;">${d.disease}</strong>
+            <span style="background: ${color}22; color: ${color}; padding: 1px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">● ${d.severity} Severity</span>
+            ${emergencyTag}
+          </div>
+          <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 4px;">🏥 <strong>Department:</strong> ${d.department} &nbsp;|&nbsp; 👨‍⚕️ <strong>See:</strong> ${d.specialist}</div>
+          <div style="font-size: 0.8rem; color: #64748b;">Matching symptoms: ${d.matchedSymptoms.join(', ')}</div>
+        </div>`;
+    }).join('');
+
+    const topDept = diseaseScores[0].department;
+    const topSpecialist = diseaseScores[0].specialist;
+
+    let reply = `
+      <strong>🩺 AI Symptom Analysis:</strong><br/><br/>
+      ${emergencyBanner}
+      ${diseasePills}
+      <div style="margin-top: 8px; font-size: 0.83rem; color: #94a3b8;">📌 <em>Recommended: Visit the <strong>${topDept}</strong> department and consult a <strong>${topSpecialist}</strong>. Use the hospital search to find nearby specialists.</em></div>
+    `;
+
+    // Append legacy procedure info if also relevant
+    if (legacyMatch) {
+      reply += `
+        <br/><div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 4px; font-size: 0.83rem;">
+          <strong>💊 Procedure Reference:</strong> ${legacyMatch.suggestedTreatment} &nbsp;|&nbsp; Est. Cost: ${legacyMatch.estimatedCostRange}
+        </div>`;
+    }
+
+    return res.json({ reply });
+  }
+
+  // Fallback: legacy procedure match
+  if (legacyMatch) {
     return res.json({
       reply: `
         <strong>💡 AI Medical Recommendation:</strong><br/>
-        • <strong>Department:</strong> ${match.suggestedDepartment}<br/>
-        • <strong>Suggested Treatment:</strong> ${match.suggestedTreatment}<br/>
-        • <strong>Urgency Level:</strong> <span style="color: #ef4444; font-weight:700;">${match.urgency}</span><br/>
-        • <strong>Est. Treatment Cost:</strong> ${match.estimatedCostRange}<br/>
+        • <strong>Department:</strong> ${legacyMatch.suggestedDepartment}<br/>
+        • <strong>Suggested Treatment:</strong> ${legacyMatch.suggestedTreatment}<br/>
+        • <strong>Urgency Level:</strong> <span style="color: #ef4444; font-weight:700;">${legacyMatch.urgency}</span><br/>
+        • <strong>Est. Treatment Cost:</strong> ${legacyMatch.estimatedCostRange}<br/>
         <em>Tip: Click "Search Hospitals" to filter hospitals providing this procedure.</em>
       `
     });
   }
 
+  // Generic fallback
   res.json({
     reply: `
-      Based on your symptom ("${query}"), we recommend consulting a <strong>General Physician</strong> for immediate assessment. Recommended nearby hospitals with active OPD: City Care Hospital & Apex Heart Institute.
+      Based on your symptom ("${query}"), we recommend consulting a <strong>General Physician</strong> for immediate assessment. Recommended nearby hospitals with active OPD: City Care Hospital &amp; Apex Heart Institute.
     `
   });
 });
