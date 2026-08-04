@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hospital Admin SaaS Portal | Manage Profile & Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="dashboard-body">
+
+  <!-- ==================== AUTH MODAL (Login / Register) ==================== -->
+  <div id="authModal" class="auth-modal-overlay">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-logo">
+          <span class="logo-icon">🏥</span>
+          <span class="logo-text">MediAdmin <span>SaaS</span></span>
+        </div>
+        <p class="auth-subtitle">Hospital Management & Public Directory Portal</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab-btn active" id="btnTabLogin" onclick="switchAuthTab('login')">Hospital Login</button>
+        <button type="button" class="auth-tab-btn" id="btnTabRegister" onclick="switchAuthTab('register')">Register Hospital</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="formLogin" class="auth-form active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="loginEmail" required placeholder="admin@hospital.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-block">Log In to Dashboard</button>
+        </div>
+        <div class="auth-footer-note">
+          <span>Demo Hospital Account:</span> <code>admin@citycare.com</code> / <code>admin123</code>
+        </div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="formRegister" class="auth-form" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label>Hospital Name</label>
+          <input type="text" id="regHospitalName" required placeholder="e.g. Metro Super Specialty Hospital" />
+        </div>
+        <div class="form-group">
+          <label>Administrator Name</label>
+          <input type="text" id="regAdminName" required placeholder="Dr. Rajesh Kumar" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="regCity" placeholder="New Delhi" />
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <input type="text" id="regState" placeholder="Delhi" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Work Email</label>
+          <input type="email" id="regEmail" required placeholder="admin@metrohospital.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPassword" required placeholder="Minimum 6 characters" minlength="6" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success btn-block">Create Hospital Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD MAIN WRAPPER ==================== -->
+  <div class="app-layout" id="appLayout" style="display: none;">
+
+    <!-- TOPBAR / NAVBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-nav-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="hospital-identity">
+          <div class="hosp-logo-thumb" id="headerLogoThumb">🏥</div>
+          <div>
+            <h2 id="headerHospitalName" class="hosp-name-title">Hospital Name</h2>
+            <div class="hosp-status-pill" id="headerStatusBadge">Draft</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <a href="index.html" class="btn btn-outline btn-sm">👈 View Patient Finder</a>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="saveDraftProfile()">
+          💾 Save Draft
+        </button>
+        <button type="button" class="btn btn-accent btn-sm" onclick="openPreviewModal()">
+          👁️ Preview Profile
+        </button>
+        <button type="button" class="btn btn-success btn-sm" onclick="publishProfile()">
+          🚀 Publish Changes
+        </button>
+        <div class="user-profile-menu">
+          <span id="headerUserName">Admin</span>
+          <button class="btn-icon-logout" title="Log Out" onclick="handleLogout()">🚪</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-body">
+
+      <!-- SIDEBAR NAVIGATION (15 MODULES) -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-menu-label">DASHBOARD MODULES</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-tab="overview" onclick="switchTab('overview')">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">1. Overview</span>
+          </button>
+          <button class="nav-item" data-tab="profile" onclick="switchTab('profile')">
+            <span class="nav-icon">🏥</span>
+            <span class="nav-label">2. Hospital Profile</span>
+          </button>
+          <button class="nav-item" data-tab="gallery" onclick="switchTab('gallery')">
+            <span class="nav-icon">🖼️</span>
+            <span class="nav-label">3. Gallery</span>
+          </button>
+          <button class="nav-item" data-tab="departments" onclick="switchTab('departments')">
+            <span class="nav-icon">🏢</span>
+            <span class="nav-label">4. Departments</span>
+          </button>
+          <button class="nav-item" data-tab="doctors" onclick="switchTab('doctors')">
+            <span class="nav-icon">👨‍⚕️</span>
+            <span class="nav-label">5. Doctors</span>
+          </button>
+          <button class="nav-item" data-tab="facilities" onclick="switchTab('facilities')">
+            <span class="nav-icon">⚡</span>
+            <span class="nav-label">6. Facilities</span>
+          </button>
+          <button class="nav-item" data-tab="treatments" onclick="switchTab('treatments')">
+            <span class="nav-icon">💉</span>
+            <span class="nav-label">7. Treatments & Costs</span>
+          </button>
+          <button class="nav-item" data-tab="rooms" onclick="switchTab('rooms')">
+            <span class="nav-icon">🛏️</span>
+            <span class="nav-label">8. Rooms & Beds</span>
+          </button>
+          <button class="nav-item" data-tab="pricing" onclick="switchTab('pricing')">
+            <span class="nav-icon">🏷️</span>
+            <span class="nav-label">9. Pricing</span>
+          </button>
+          <button class="nav-item" data-tab="laboratory" onclick="switchTab('laboratory')">
+            <span class="nav-icon">🔬</span>
+            <span class="nav-label">10. Laboratory</span>
+          </button>
+          <button class="nav-item" data-tab="pharmacy" onclick="switchTab('pharmacy')">
+            <span class="nav-icon">💊</span>
+            <span class="nav-label">11. Pharmacy</span>
+          </button>
+          <button class="nav-item" data-tab="ambulance" onclick="switchTab('ambulance')">
+            <span class="nav-icon">🚑</span>
+            <span class="nav-label">12. Ambulance</span>
+          </button>
+          <button class="nav-item" data-tab="insurance" onclick="switchTab('insurance')">
+            <span class="nav-icon">🛡️</span>
+            <span class="nav-label">13. Insurance & Schemes</span>
+          </button>
+          <button class="nav-item" data-tab="awards" onclick="switchTab('awards')">
+            <span class="nav-icon">📜</span>
+            <span class="nav-label">14. Awards & Certs</span>
+          </button>
+          <button class="nav-item" data-tab="contact" onclick="switchTab('contact')">
+            <span class="nav-icon">📞</span>
+            <span class="nav-label">15. Contact & Social</span>
+          </button>
+        </nav>
+      </aside>
+
+      <!-- CONTENT PANELS CONTAINER -->
+      <main class="content-area">
+
+        <!-- ALERT TOAST CONTAINER -->
+        <div id="toastAlert" class="toast-alert" style="display: none;"></div>
+
+        <!-- 1. OVERVIEW MODULE -->
+        <section id="tab-overview" class="tab-pane active">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Overview & Analytics</h1>
+              <p class="panel-desc">Real-time status of your hospital profile, departments, bed capacity & published status.</p>
+            </div>
+            <div class="panel-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="saveDraftProfile()">Save State</button>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon blue">👨‍⚕️</div>
+              <div class="stat-info">
+                <span class="stat-label">Total Doctors</span>
+                <span class="stat-value" id="statDoctorsCount">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon teal">🏢</div>
+              <div class="stat-info">
+                <span class="stat-label">Departments</span>
+                <span class="stat-value" id="statDeptsCount">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon purple">🛏️</div>
+              <div class="stat-info">
+                <span class="stat-label">Total Beds</span>
+                <span class="stat-value" id="statTotalBeds">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green">✅</div>
+              <div class="stat-info">
+                <span class="stat-label">Available Beds</span>
+                <span class="stat-value" id="statAvailBeds">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon orange">💉</div>
+              <div class="stat-info">
+                <span class="stat-label">Treatments Offered</span>
+                <span class="stat-value" id="statTreatmentsCount">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon indigo">⚡</div>
+              <div class="stat-info">
+                <span class="stat-label">Active Facilities</span>
+                <span class="stat-value" id="statFacilitiesCount">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-hero margin-top-lg">
+            <div class="hero-status-wrapper">
+              <div class="status-indicator-lg" id="overviewStatusBanner">
+                <span class="status-dot"></span>
+                <span class="status-title-text">Profile Status: Draft</span>
+              </div>
+              <p>Your hospital profile is currently editable. Click <strong>Publish Changes</strong> whenever you are ready to display your updated profile to patients on the Hospital Finder app.</p>
+            </div>
+            <div class="action-buttons-row">
+              <button class="btn btn-accent" onclick="openPreviewModal()">👁️ Live Preview Mode</button>
+              <button class="btn btn-success" onclick="publishProfile()">🚀 Publish Profile Live</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. HOSPITAL PROFILE MODULE -->
+        <section id="tab-profile" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Profile & Identity</h1>
+              <p class="panel-desc">General details, official registration, location, operating hours, and imagery.</p>
+            </div>
+          </div>
+
+          <form id="formProfile" onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Visual Branding</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Hospital Logo</label>
+                  <div class="file-uploader-box">
+                    <input type="file" id="fileLogo" accept="image/*" onchange="handleFileUpload(event, 'pLogoPreview', 'profLogoData')" />
+                    <input type="hidden" id="profLogoData" />
+                    <div class="file-preview-img" id="pLogoPreview">📁 Click or drop logo image</div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Cover Image</label>
+                  <div class="file-uploader-box">
+                    <input type="file" id="fileCover" accept="image/*" onchange="handleFileUpload(event, 'pCoverPreview', 'profCoverData')" />
+                    <input type="hidden" id="profCoverData" />
+                    <div class="file-preview-img" id="pCoverPreview">📁 Click or drop cover image</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Core Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Hospital Name *</label>
+                  <input type="text" id="profName" required />
+                </div>
+                <div class="form-group">
+                  <label>Hospital Type</label>
+                  <select id="profType">
+                    <option value="private">Private Super Specialty</option>
+                    <option value="government">Government / Public Hospital</option>
+                    <option value="trust">Trust / Non-Profit</option>
+                    <option value="clinic">Polyclinic & Nursing Home</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Registration Number</label>
+                  <input type="text" id="profRegNumber" placeholder="e.g. REG-DEL-2024-8890" />
+                </div>
+                <div class="form-group">
+                  <label>Establishment Year</label>
+                  <input type="text" id="profEstYear" placeholder="e.g. 1998" />
+                </div>
+                <div class="form-group">
+                  <label>Accreditation</label>
+                  <input type="text" id="profAccreditation" placeholder="e.g. NABH & NABL Accredited" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>About Hospital (Short Tagline)</label>
+                <input type="text" id="profAbout" placeholder="e.g. Premier tertiary care cardiac & trauma centre" />
+              </div>
+
+              <div class="form-group">
+                <label>Detailed Description</label>
+                <textarea id="profDescription" rows="4" placeholder="Enter comprehensive overview of clinical expertise, infrastructure, and values..."></textarea>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Location & Address</h3>
+              <div class="form-group">
+                <label>Street Address</label>
+                <input type="text" id="profAddress" placeholder="12 Health Avenue, Near Central Metro Station" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>City</label>
+                  <input type="text" id="profCity" placeholder="New Delhi" />
+                </div>
+                <div class="form-group">
+                  <label>State</label>
+                  <input type="text" id="profState" placeholder="Delhi" />
+                </div>
+                <div class="form-group">
+                  <label>PIN Code</label>
+                  <input type="text" id="profPincode" placeholder="110001" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Google Maps Embed or Share URL</label>
+                <input type="url" id="profMapsUrl" placeholder="https://maps.google.com/?q=..." />
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Working Hours & Availability</h3>
+              <div class="form-row align-items-center">
+                <div class="form-group flex-2">
+                  <label>Working Hours Text</label>
+                  <input type="text" id="profWorkingHours" placeholder="e.g. OPD: 8:00 AM - 8:00 PM (Emergency 24x7)" />
+                </div>
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="profIs247" checked />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">24x7 Emergency Availability</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Profile Module</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 3. GALLERY MODULE -->
+        <section id="tab-gallery" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Photo Gallery</h1>
+              <p class="panel-desc">Upload photos of Reception, ICUs, Wards, Operation Theatres, Ambulances, Labs & Pharmacy.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Upload New Photo</h3>
+            <div class="form-row align-items-end">
+              <div class="form-group flex-1">
+                <label>Category</label>
+                <select id="galleryCategory">
+                  <option value="Reception">Reception & Lounge</option>
+                  <option value="ICU">ICU & Critical Care</option>
+                  <option value="Ward">Patient Wards & Rooms</option>
+                  <option value="Operation Theatre">Operation Theatre (OT)</option>
+                  <option value="Ambulance">Ambulance Fleet</option>
+                  <option value="Pharmacy">Pharmacy</option>
+                  <option value="Laboratory">Laboratory & Diagnostics</option>
+                  <option value="General">Exterior & Campus</option>
+                </select>
+              </div>
+              <div class="form-group flex-2">
+                <label>Photo File</label>
+                <input type="file" id="galleryFile" accept="image/*" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Caption / Title</label>
+                <input type="text" id="galleryCaption" placeholder="e.g. Modern 12-Bed ICU" />
+              </div>
+              <div class="form-group">
+                <button type="button" class="btn btn-success" onclick="addGalleryImage()">Upload Photo</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card margin-top-md">
+            <h3 class="card-section-title">Gallery Images</h3>
+            <div id="galleryGrid" class="gallery-grid">
+              <!-- Dynamically Populated -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. DEPARTMENTS MODULE -->
+        <section id="tab-departments" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Departments</h1>
+              <p class="panel-desc">Manage clinical departments, medical heads, floor allocations and specialty details.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Add New Department</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Department Name *</label>
+                <input type="text" id="deptName" placeholder="e.g. Cardiology" />
+              </div>
+              <div class="form-group">
+                <label>Head of Department (HOD)</label>
+                <input type="text" id="deptHead" placeholder="e.g. Dr. V. K. Gupta" />
+              </div>
+              <div class="form-group">
+                <label>Floor / Wing</label>
+                <input type="text" id="deptFloor" placeholder="e.g. 3rd Floor, Block B" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description & Clinical Focus</label>
+              <input type="text" id="deptDesc" placeholder="e.g. Comprehensive cardiac care, cath lab, cardiac bypass" />
+            </div>
+            <button type="button" class="btn btn-primary" onclick="addDepartment()">Add Department</button>
+          </div>
+
+          <div class="card margin-top-md">
+            <h3 class="card-section-title">Active Departments List</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Department Name</th>
+                    <th>Head of Dept</th>
+                    <th>Floor Number</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="deptTableBody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. DOCTORS MODULE -->
+        <section id="tab-doctors" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Doctors Roster Management</h1>
+              <p class="panel-desc">Add medical specialists, qualifications, experience, consultation fees, and available days.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Add Doctor to Roster</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Doctor Name *</label>
+                <input type="text" id="docName" placeholder="Dr. Ananya Sharma" />
+              </div>
+              <div class="form-group">
+                <label>Specialization *</label>
+                <input type="text" id="docSpec" placeholder="Senior Cardiologist" />
+              </div>
+              <div class="form-group">
+                <label>Department</label>
+                <select id="docDeptSelect">
+                  <!-- Populated from departments -->
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Qualification</label>
+                <input type="text" id="docQual" placeholder="MBBS, MD, DM (Cardiology)" />
+              </div>
+              <div class="form-group">
+                <label>Experience</label>
+                <input type="text" id="docExp" placeholder="12 Years" />
+              </div>
+              <div class="form-group">
+                <label>Consultation Fee (₹)</label>
+                <input type="number" id="docFee" placeholder="800" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>OPD Timings</label>
+                <input type="text" id="docTiming" placeholder="10:00 AM - 02:00 PM" />
+              </div>
+              <div class="form-group">
+                <label>Available Days</label>
+                <input type="text" id="docDays" placeholder="Mon, Wed, Fri" />
+              </div>
+              <div class="form-group">
+                <label>Languages Spoken</label>
+                <input type="text" id="docLanguages" placeholder="English, Hindi, Punjabi" />
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="addDoctor()">Add Doctor</button>
+          </div>
+
+          <div class="card margin-top-md">
+            <h3 class="card-section-title">Doctor Roster</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Doctor Name</th>
+                    <th>Specialization & Dept</th>
+                    <th>Qualifications</th>
+                    <th>Experience</th>
+                    <th>Fee</th>
+                    <th>OPD Schedule</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="doctorsTableBody">
+                  <!-- Populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. FACILITIES MODULE -->
+        <section id="tab-facilities" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Facilities & Infrastructure</h1>
+              <p class="panel-desc">Enable or disable 24+ healthcare facilities and services provided at your hospital.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Facilities Toggle Matrix</h3>
+            <div class="facilities-grid" id="facilitiesGrid">
+              <!-- Dynamically populated toggle checkboxes for 24+ facilities -->
+            </div>
+            <div class="margin-top-md">
+              <button type="button" class="btn btn-primary" onclick="saveDraftProfile()">Save Facilities Matrix</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. TREATMENTS MODULE -->
+        <section id="tab-treatments" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Treatments & Services Catalog</h1>
+              <p class="panel-desc">Add unlimited medical procedures, surgeries, estimated costs, and durations.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Add New Treatment / Surgery Package</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Treatment Name *</label>
+                <input type="text" id="treatName" placeholder="e.g. Coronary Angioplasty" />
+              </div>
+              <div class="form-group">
+                <label>Department</label>
+                <input type="text" id="treatDept" placeholder="e.g. Cardiology" />
+              </div>
+              <div class="form-group">
+                <label>Estimated Cost (₹) *</label>
+                <input type="number" id="treatCost" placeholder="125000" />
+              </div>
+              <div class="form-group">
+                <label>Duration / Stay</label>
+                <input type="text" id="treatDuration" placeholder="e.g. 2 Days Hospital Stay" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Treatment Description</label>
+              <input type="text" id="treatDesc" placeholder="e.g. Includes stent insertion, ICU stay, and post-op care." />
+            </div>
+            <button type="button" class="btn btn-primary" onclick="addTreatment()">Add Treatment</button>
+          </div>
+
+          <div class="card margin-top-md">
+            <h3 class="card-section-title">Treatments List</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Treatment Name</th>
+                    <th>Department</th>
+                    <th>Estimated Cost</th>
+                    <th>Duration</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="treatmentsTableBody">
+                  <!-- Populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. ROOM & BED MANAGEMENT MODULE -->
+        <section id="tab-rooms" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Room & Bed Capacity Management</h1>
+              <p class="panel-desc">Real-time control over General Beds, ICU Beds, Private Rooms, Deluxe & VIP suites.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Bed Counts & Availability</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>General Beds Total</label>
+                  <input type="number" id="bedGenTotal" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>General Beds Available</label>
+                  <input type="number" id="bedGenAvail" min="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>ICU Beds Total</label>
+                  <input type="number" id="bedIcuTotal" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>ICU Beds Available</label>
+                  <input type="number" id="bedIcuAvail" min="0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Emergency Beds Total</label>
+                  <input type="number" id="bedEmgTotal" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>Emergency Beds Available</label>
+                  <input type="number" id="bedEmgAvail" min="0" />
+                </div>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Private Rooms & Suites Capacity</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Private Single Rooms</label>
+                  <input type="number" id="roomPrivate" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>Deluxe Rooms</label>
+                  <input type="number" id="roomDeluxe" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>VIP Suites</label>
+                  <input type="number" id="roomVip" min="0" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Update Room & Bed Counts</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 9. PRICING MODULE -->
+        <section id="tab-pricing" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Hospital Pricing & Tariff Structure</h1>
+              <p class="panel-desc">Manage standard charges for consultations, ICU, rooms, surgery packages, and diagnostics.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Standard Consultation & Room Charges</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>OPD Consultation Charge (₹)</label>
+                  <input type="number" id="priceOpd" placeholder="500" />
+                </div>
+                <div class="form-group">
+                  <label>Emergency Triage Charge (₹)</label>
+                  <input type="number" id="priceEmergency" placeholder="1000" />
+                </div>
+                <div class="form-group">
+                  <label>ICU Per Day Charge (₹)</label>
+                  <input type="number" id="priceIcu" placeholder="6000" />
+                </div>
+                <div class="form-group">
+                  <label>Standard General Ward / Day (₹)</label>
+                  <input type="number" id="priceRoom" placeholder="1500" />
+                </div>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Surgery Packages & Diagnostic Tariffs</h3>
+              <div class="form-group">
+                <label>Surgery Packages Summary (Notes)</label>
+                <textarea id="priceSurgeryPackages" rows="3" placeholder="e.g. Normal Delivery: ₹35,000 | C-Section: ₹55,000 | Laparoscopic Cholecystectomy: ₹48,000"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Diagnostic Tests Rate List Highlights</label>
+                <textarea id="priceDiagnosticTests" rows="3" placeholder="e.g. Blood Sugar: ₹100 | Lipid Profile: ₹600 | MRI Brain: ₹4500 | CT Scan Chest: ₹3200"></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Tariff Updates</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 10. LABORATORY MODULE -->
+        <section id="tab-laboratory" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Laboratory & Diagnostic Services</h1>
+              <p class="panel-desc">Configure lab test directory, home sample collection, and report delivery SLAs.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Lab Diagnostic Options</h3>
+              <div class="form-group">
+                <label>Available Tests Directory</label>
+                <textarea id="labTests" rows="4" placeholder="List key tests (e.g. Complete Blood Count, Liver Function Test, Renal Panel, Thyroid Profile, RT-PCR, Pathology, Histopathology...)"></textarea>
+              </div>
+
+              <div class="form-row align-items-center">
+                <div class="form-group flex-1">
+                  <label class="toggle-container">
+                    <input type="checkbox" id="labHomeSample" />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">Home Sample Collection Available</span>
+                  </label>
+                </div>
+                <div class="form-group flex-1">
+                  <label>Report Delivery Time</label>
+                  <input type="text" id="labDeliveryTime" placeholder="e.g. Within 12 - 24 Hours (Online & Hardcopy)" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Laboratory Module</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 11. PHARMACY MODULE -->
+        <section id="tab-pharmacy" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Pharmacy Services</h1>
+              <p class="panel-desc">Configure 24x7 pharmacy availability, home medicine delivery, and emergency drugs stock.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Pharmacy Details</h3>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="pharmacyIs247" checked />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">24x7 In-House Pharmacy</span>
+                  </label>
+                </div>
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="pharmacyHomeDelivery" />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">Medicine Home Delivery</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group margin-top-md">
+                <label>Emergency & Critical Care Medicines Stock Notes</label>
+                <input type="text" id="pharmacyEmergencyMedicines" placeholder="e.g. Life-saving drugs, anti-snake venom, anti-rabies, chemotherapy drugs stocked 24/7." />
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Pharmacy Module</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 12. AMBULANCE MODULE -->
+        <section id="tab-ambulance" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Ambulance Services & Dispatch</h1>
+              <p class="panel-desc">Manage fleet size, emergency dispatch numbers, charges, and real-time availability.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Fleet & Dispatch Settings</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Number of Active Ambulances</label>
+                  <input type="number" id="ambCount" min="0" placeholder="3" />
+                </div>
+                <div class="form-group">
+                  <label>Direct Emergency Helpline</label>
+                  <input type="text" id="ambPhone" placeholder="+91 98765 43210 / 108" />
+                </div>
+                <div class="form-group">
+                  <label>Ambulance Fare / Charges</label>
+                  <input type="text" id="ambCharges" placeholder="₹500 flat up to 5km (₹40/km thereafter)" />
+                </div>
+              </div>
+
+              <div class="form-group margin-top-sm">
+                <label class="toggle-container">
+                  <input type="checkbox" id="ambAvailable" checked />
+                  <span class="toggle-switch"></span>
+                  <span class="toggle-label">Ambulance Fleet Currently Available for Dispatch</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Ambulance Module</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 13. INSURANCE & GOVT SCHEMES MODULE -->
+        <section id="tab-insurance" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Insurance & Government Health Schemes</h1>
+              <p class="panel-desc">Configure empaneled insurance TPA partners, Ayushman Bharat, CGHS, ECHS & Cashless facility.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Government Schemes & Cashless Facility</h3>
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="insAyushman" checked />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">Ayushman Bharat (PM-JAY) Approved</span>
+                  </label>
+                </div>
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="insCGHS" />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">CGHS Empaneled</span>
+                  </label>
+                </div>
+                <div class="form-group flex-1">
+                  <label class="toggle-container margin-top-sm">
+                    <input type="checkbox" id="insECHS" />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-label">ECHS Empaneled</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group margin-top-md">
+                <label class="toggle-container">
+                  <input type="checkbox" id="insCashless" checked />
+                  <span class="toggle-switch"></span>
+                  <span class="toggle-label">Cashless Treatment Available for Insurance TPA</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Empaneled Insurance & TPA Partners</h3>
+              <div class="form-group">
+                <label>Empaneled Insurance Companies (Comma Separated)</label>
+                <textarea id="insCompanies" rows="3" placeholder="e.g. Star Health, HDFC ERGO, Niva Bupa, ICICI Lombard, Bajaj Allianz, Care Health, Max Bupa, New India Assurance..."></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Insurance Module</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 14. AWARDS & CERTIFICATIONS MODULE -->
+        <section id="tab-awards" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Awards, Registration & NABH/NABL Certificates</h1>
+              <p class="panel-desc">Upload certificates, registration documents, NABH/NABL accreditations & awards (PDF/Images).</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-section-title">Upload New Certificate / Document</h3>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>Document Title *</label>
+                <input type="text" id="awardTitle" placeholder="e.g. NABH Accreditation Certificate 2024" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Document Type</label>
+                <select id="awardType">
+                  <option value="NABH/NABL Certificate">NABH/NABL Certificate</option>
+                  <option value="Registration Document">Registration Document</option>
+                  <option value="Medical License">Medical License</option>
+                  <option value="Excellence Award">Excellence Award</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row align-items-end">
+              <div class="form-group flex-2">
+                <label>Choose File (PDF / Image)</label>
+                <input type="file" id="awardFile" accept="image/*,application/pdf" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Issue Date / Valid Till</label>
+                <input type="text" id="awardDate" placeholder="e.g. Valid till Dec 2027" />
+              </div>
+              <div class="form-group">
+                <button type="button" class="btn btn-success" onclick="addAwardDoc()">Upload Document</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card margin-top-md">
+            <h3 class="card-section-title">Uploaded Accreditation & Documents</h3>
+            <div id="awardsGrid" class="awards-grid">
+              <!-- Populated -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 15. CONTACT INFORMATION MODULE -->
+        <section id="tab-contact" class="tab-pane">
+          <div class="panel-header">
+            <div>
+              <h1 class="panel-title">Contact Information & Social Links</h1>
+              <p class="panel-desc">Maintain reception lines, emergency hotline, WhatsApp support, email, and social profiles.</p>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); saveDraftProfile();">
+            <div class="card">
+              <h3 class="card-section-title">Direct Helplines & Communication</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Reception Contact Number</label>
+                  <input type="text" id="cntReception" placeholder="+91 11 2658 8800" />
+                </div>
+                <div class="form-group">
+                  <label>Emergency 24x7 Hotline</label>
+                  <input type="text" id="cntEmergency" placeholder="+91 11 2658 8888" />
+                </div>
+                <div class="form-group">
+                  <label>WhatsApp Desk Number</label>
+                  <input type="text" id="cntWhatsapp" placeholder="+91 99999 88888" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Official Email</label>
+                  <input type="email" id="cntEmail" placeholder="contact@hospital.com" />
+                </div>
+                <div class="form-group">
+                  <label>Official Website</label>
+                  <input type="url" id="cntWebsite" placeholder="https://www.hospital.com" />
+                </div>
+              </div>
+            </div>
+
+            <div class="card margin-top-md">
+              <h3 class="card-section-title">Social Media Profiles</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Facebook Profile URL</label>
+                  <input type="url" id="cntFacebook" placeholder="https://facebook.com/hospital" />
+                </div>
+                <div class="form-group">
+                  <label>Instagram Handle / Link</label>
+                  <input type="url" id="cntInstagram" placeholder="https://instagram.com/hospital" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>LinkedIn Page</label>
+                  <input type="url" id="cntLinkedin" placeholder="https://linkedin.com/company/hospital" />
+                </div>
+                <div class="form-group">
+                  <label>X (Twitter) Profile</label>
+                  <input type="url" id="cntTwitter" placeholder="https://x.com/hospital" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions-bar margin-top-lg">
+              <button type="submit" class="btn btn-primary">Save Contact Matrix</button>
+            </div>
+          </form>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== LIVE PREVIEW PROFILE MODAL ==================== -->
+  <div id="previewModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">👁️ Patient View Simulator (Preview)</h2>
+          <p class="modal-subtitle">This is exactly how your hospital profile appears to patients on the Hospital Finder platform.</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="closePreviewModal()">✕</button>
+      </div>
+
+      <div class="modal-body preview-patient-body" id="previewContent">
+        <!-- Rendered by admin.js -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closePreviewModal()">Close Preview</button>
+        <button type="button" class="btn btn-success" onclick="closePreviewModal(); publishProfile();">🚀 Publish Live Now</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

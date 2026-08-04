@@ -140,14 +140,56 @@ export async function initDb() {
     if (!colNames.includes('pincode')) await dbRun('ALTER TABLE hospitals ADD COLUMN pincode TEXT');
     if (!colNames.includes('specialties')) await dbRun('ALTER TABLE hospitals ADD COLUMN specialties TEXT');
     if (!colNames.includes('facilities_str')) await dbRun('ALTER TABLE hospitals ADD COLUMN facilities_str TEXT');
+    if (!colNames.includes('status')) await dbRun("ALTER TABLE hospitals ADD COLUMN status TEXT DEFAULT 'published'");
+    if (!colNames.includes('logo')) await dbRun('ALTER TABLE hospitals ADD COLUMN logo TEXT');
+    if (!colNames.includes('cover_image')) await dbRun('ALTER TABLE hospitals ADD COLUMN cover_image TEXT');
+    if (!colNames.includes('about')) await dbRun('ALTER TABLE hospitals ADD COLUMN about TEXT');
+    if (!colNames.includes('reg_number')) await dbRun('ALTER TABLE hospitals ADD COLUMN reg_number TEXT');
+    if (!colNames.includes('est_year')) await dbRun('ALTER TABLE hospitals ADD COLUMN est_year TEXT');
+    if (!colNames.includes('accreditation')) await dbRun('ALTER TABLE hospitals ADD COLUMN accreditation TEXT');
+    if (!colNames.includes('description')) await dbRun('ALTER TABLE hospitals ADD COLUMN description TEXT');
+    if (!colNames.includes('address')) await dbRun('ALTER TABLE hospitals ADD COLUMN address TEXT');
+    if (!colNames.includes('google_maps_url')) await dbRun('ALTER TABLE hospitals ADD COLUMN google_maps_url TEXT');
+    if (!colNames.includes('city')) await dbRun('ALTER TABLE hospitals ADD COLUMN city TEXT');
+    if (!colNames.includes('contact_number')) await dbRun('ALTER TABLE hospitals ADD COLUMN contact_number TEXT');
+    if (!colNames.includes('emergency_number')) await dbRun('ALTER TABLE hospitals ADD COLUMN emergency_number TEXT');
+    if (!colNames.includes('email')) await dbRun('ALTER TABLE hospitals ADD COLUMN email TEXT');
+    if (!colNames.includes('website')) await dbRun('ALTER TABLE hospitals ADD COLUMN website TEXT');
+    if (!colNames.includes('working_hours')) await dbRun('ALTER TABLE hospitals ADD COLUMN working_hours TEXT');
+    if (!colNames.includes('is_247')) await dbRun('ALTER TABLE hospitals ADD COLUMN is_247 INTEGER DEFAULT 1');
+    if (!colNames.includes('private_rooms')) await dbRun('ALTER TABLE hospitals ADD COLUMN private_rooms INTEGER DEFAULT 0');
+    if (!colNames.includes('deluxe_rooms')) await dbRun('ALTER TABLE hospitals ADD COLUMN deluxe_rooms INTEGER DEFAULT 0');
+    if (!colNames.includes('vip_rooms')) await dbRun('ALTER TABLE hospitals ADD COLUMN vip_rooms INTEGER DEFAULT 0');
+    if (!colNames.includes('pricing_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN pricing_json TEXT');
+    if (!colNames.includes('lab_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN lab_json TEXT');
+    if (!colNames.includes('pharmacy_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN pharmacy_json TEXT');
+    if (!colNames.includes('ambulance_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN ambulance_json TEXT');
+    if (!colNames.includes('insurance_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN insurance_json TEXT');
+    if (!colNames.includes('contact_social_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN contact_social_json TEXT');
 
-    // 3. Create Treatments Table
+    // 3. Create Departments Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hospital_id TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        image TEXT,
+        floor TEXT,
+        head TEXT,
+        FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 4. Create Treatments Table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS treatments (
         id TEXT,
         hospital_id TEXT,
         name TEXT,
         category TEXT,
+        department TEXT,
+        description TEXT,
         cost INTEGER,
         duration TEXT,
         PRIMARY KEY (id, hospital_id),
@@ -155,20 +197,42 @@ export async function initDb() {
       )
     `);
 
-    // 4. Create Doctors Table
+    const treatCols = await dbAll("PRAGMA table_info(treatments)");
+    const treatColNames = treatCols.map(c => c.name);
+    if (!treatColNames.includes('department')) await dbRun('ALTER TABLE treatments ADD COLUMN department TEXT');
+    if (!treatColNames.includes('description')) await dbRun('ALTER TABLE treatments ADD COLUMN description TEXT');
+
+    // 5. Create Doctors Table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS doctors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hospital_id TEXT,
         name TEXT,
-        spec TEXT,
+        photo TEXT,
+        qualification TEXT,
         exp TEXT,
+        department TEXT,
+        spec TEXT,
+        fee INTEGER,
+        opd_timing TEXT,
+        available_days TEXT,
+        languages TEXT,
         status TEXT,
         FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
       )
     `);
 
-    // 5. Create Facilities Table
+    const docCols = await dbAll("PRAGMA table_info(doctors)");
+    const docColNames = docCols.map(c => c.name);
+    if (!docColNames.includes('photo')) await dbRun('ALTER TABLE doctors ADD COLUMN photo TEXT');
+    if (!docColNames.includes('qualification')) await dbRun('ALTER TABLE doctors ADD COLUMN qualification TEXT');
+    if (!docColNames.includes('department')) await dbRun('ALTER TABLE doctors ADD COLUMN department TEXT');
+    if (!docColNames.includes('fee')) await dbRun('ALTER TABLE doctors ADD COLUMN fee INTEGER');
+    if (!docColNames.includes('opd_timing')) await dbRun('ALTER TABLE doctors ADD COLUMN opd_timing TEXT');
+    if (!docColNames.includes('available_days')) await dbRun('ALTER TABLE doctors ADD COLUMN available_days TEXT');
+    if (!docColNames.includes('languages')) await dbRun('ALTER TABLE doctors ADD COLUMN languages TEXT');
+
+    // 6. Create Facilities Table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS facilities (
         hospital_id TEXT,
@@ -178,7 +242,34 @@ export async function initDb() {
       )
     `);
 
-    // 6. Create Bookings Table
+    // 7. Create Hospital Gallery Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS hospital_gallery (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hospital_id TEXT,
+        category TEXT,
+        image_url TEXT,
+        caption TEXT,
+        sort_order INTEGER DEFAULT 0,
+        FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 8. Create Awards & Certifications Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS awards_certs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hospital_id TEXT,
+        title TEXT NOT NULL,
+        type TEXT,
+        file_url TEXT,
+        file_type TEXT,
+        issue_date TEXT,
+        FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 9. Create Bookings Table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS bookings (
         id TEXT PRIMARY KEY,
@@ -197,7 +288,7 @@ export async function initDb() {
       )
     `);
 
-    // 7. Create Health Records Table
+    // 10. Create Health Records Table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS health_records (
         id TEXT PRIMARY KEY,

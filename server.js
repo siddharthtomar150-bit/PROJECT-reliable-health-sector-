@@ -789,6 +789,387 @@ app.post('/api/symptoms/check', async (req, res) => {
   });
 });
 
+// ==================== HOSPITAL ADMIN DASHBOARD API ====================
+
+// 1. Register Hospital Admin and Create Blank Hospital Profile
+app.post('/api/auth/register-hospital', async (req, res) => {
+  const { name, email, password, hospitalName, city, state } = req.body;
+
+  if (!name || !email || !password || !hospitalName) {
+    return res.status(400).json({ error: 'Please provide admin name, email, password, and hospital name.' });
+  }
+
+  try {
+    const existingUser = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+    if (existingUser) {
+      return res.status(400).json({ error: 'User with this email already exists.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const hospitalId = `hosp-admin-${Date.now()}`;
+
+    // Create Blank Hospital Profile with draft status (No dummy data forced)
+    await dbRun(`
+      INSERT INTO hospitals (
+        id, name, tagline, badge, type, rating, review_count, distance_km,
+        location, lat, lng, phone, emergency_available, estimated_avg_cost,
+        icu_total, icu_available, emergency_total, emergency_beds_available,
+        general_total, general_available, opd_wait_time_mins, state, district, pincode,
+        specialties, facilities_str, status, city, is_247
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      hospitalId,
+      hospitalName,
+      'Hospital Profile Draft',
+      '🏥 Private Hospital',
+      'private',
+      5.0, 0, 1.0,
+      `${city || ''}, ${state || ''}`.trim(),
+      28.6139, 77.2090,
+      '',
+      1, 0,
+      0, 0, 0, 0, 0, 0, 15,
+      state || '', city || '', '',
+      '', '', 'draft', city || '', 1
+    ]);
+
+    // Insert Admin User
+    const userResult = await dbRun(
+      'INSERT INTO users (name, email, password, role, hospital_id) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashedPassword, 'admin', hospitalId]
+    );
+
+    const token = jwt.sign(
+      { id: userResult.id, name, email, role: 'admin', hospitalId },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'Hospital registered successfully',
+      token,
+      user: { id: userResult.id, name, email, role: 'admin', hospitalId },
+      hospitalId
+    });
+  } catch (err) {
+    console.error('Hospital registration error:', err);
+    res.status(500).json({ error: 'Internal server error during registration.' });
+  }
+});
+
+// 2. Upload Handler (Images & PDFs Base64)
+app.post('/api/upload', authenticateToken, async (req, res) => {
+  const { dataUrl, fileName } = req.body;
+  if (!dataUrl) {
+    return res.status(400).json({ error: 'No file data provided.' });
+  }
+  // In pure JS mode without multipart libs, dataUrl (base64) works seamlessly for both browser preview & database storage
+  res.json({ fileUrl: dataUrl, fileName: fileName || 'uploaded_document' });
+});
+
+// 3. Get Complete Hospital Profile (For Admin Dashboard)
+app.get('/api/hospital-admin/full-profile', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) {
+    return res.status(403).json({ error: 'Access denied. Hospital Admins only.' });
+  }
+
+  const hospId = req.user.hospitalId;
+
+  try {
+    const hospital = await dbGet('SELECT * FROM hospitals WHERE id = ?', [hospId]);
+    if (!hospital) {
+      return res.status(404).json({ error: 'Hospital record not found.' });
+    }
+
+    const departments = await dbAll('SELECT * FROM departments WHERE hospital_id = ? ORDER BY id ASC', [hospId]);
+    const doctors = await dbAll('SELECT * FROM doctors WHERE hospital_id = ? ORDER BY id ASC', [hospId]);
+    const treatments = await dbAll('SELECT * FROM treatments WHERE hospital_id = ? ORDER BY id ASC', [hospId]);
+    const facilitiesRows = await dbAll('SELECT facility FROM facilities WHERE hospital_id = ?', [hospId]);
+    const gallery = await dbAll('SELECT * FROM hospital_gallery WHERE hospital_id = ? ORDER BY sort_order ASC, id ASC', [hospId]);
+    const awards = await dbAll('SELECT * FROM awards_certs WHERE hospital_id = ? ORDER BY id ASC', [hospId]);
+
+    const facilities = facilitiesRows.map(f => f.facility);
+
+    res.json({
+      hospital: {
+        id: hospital.id,
+        name: hospital.name || '',
+        logo: hospital.logo || '',
+        coverImage: hospital.cover_image || '',
+        about: hospital.about || '',
+        type: hospital.type || 'private',
+        regNumber: hospital.reg_number || '',
+        estYear: hospital.est_year || '',
+        accreditation: hospital.accreditation || '',
+        description: hospital.description || '',
+        address: hospital.address || '',
+        googleMapsUrl: hospital.google_maps_url || '',
+        city: hospital.city || hospital.district || '',
+        state: hospital.state || '',
+        pincode: hospital.pincode || '',
+        contactNumber: hospital.contact_number || hospital.phone || '',
+        emergencyNumber: hospital.emergency_number || '',
+        email: hospital.email || '',
+        website: hospital.website || '',
+        workingHours: hospital.working_hours || '24x7',
+        is247: hospital.is_247 !== 0,
+        status: hospital.status || 'draft',
+        // Beds
+        beds: {
+          generalTotal: hospital.general_total || 0,
+          generalAvailable: hospital.general_available || 0,
+          icuTotal: hospital.icu_total || 0,
+          icuAvailable: hospital.icu_available || 0,
+          emergencyTotal: hospital.emergency_total || 0,
+          emergencyBedsAvailable: hospital.emergency_beds_available || 0,
+          privateRooms: hospital.private_rooms || 0,
+          deluxeRooms: hospital.deluxe_rooms || 0,
+          vipRooms: hospital.vip_rooms || 0
+        },
+        // Parsed JSON modules
+        pricing: hospital.pricing_json ? JSON.parse(hospital.pricing_json) : { opd: 500, emergency: 1000, icu: 5000, room: 2000, surgeryPackages: '', diagnosticTests: '' },
+        lab: hospital.lab_json ? JSON.parse(hospital.lab_json) : { tests: '', homeSample: false, reportDeliveryTime: '24 Hours' },
+        pharmacy: hospital.pharmacy_json ? JSON.parse(hospital.pharmacy_json) : { is247: true, homeDelivery: false, emergencyMedicines: '' },
+        ambulance: hospital.ambulance_json ? JSON.parse(hospital.ambulance_json) : { count: 1, phone: hospital.phone || '', charges: '₹500 / 5km', available: true },
+        insurance: hospital.insurance_json ? JSON.parse(hospital.insurance_json) : { companies: 'HDFC ERGO, Star Health, ICICI Lombard', ayushmanBharat: true, cghs: false, echs: false, cashless: true },
+        contactSocial: hospital.contact_social_json ? JSON.parse(hospital.contact_social_json) : { whatsapp: '', facebook: '', instagram: '', linkedin: '', twitter: '' }
+      },
+      departments,
+      doctors,
+      treatments,
+      facilities,
+      gallery,
+      awards
+    });
+  } catch (err) {
+    console.error('Error fetching full admin profile:', err);
+    res.status(500).json({ error: 'Failed to load profile.' });
+  }
+});
+
+// 4. Save/Update Hospital Profile (Supports Draft & Publish)
+app.put('/api/hospital-admin/full-profile', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) {
+    return res.status(403).json({ error: 'Access denied.' });
+  }
+
+  const hospId = req.user.hospitalId;
+  const {
+    name, logo, coverImage, about, type, regNumber, estYear, accreditation,
+    description, address, googleMapsUrl, city, state, pincode, contactNumber,
+    emergencyNumber, email, website, workingHours, is247, status,
+    beds, pricing, lab, pharmacy, ambulance, insurance, contactSocial, facilities
+  } = req.body;
+
+  try {
+    await dbRun(`
+      UPDATE hospitals SET
+        name = ?, logo = ?, cover_image = ?, about = ?, type = ?, reg_number = ?,
+        est_year = ?, accreditation = ?, description = ?, address = ?, google_maps_url = ?,
+        city = ?, state = ?, pincode = ?, contact_number = ?, emergency_number = ?,
+        email = ?, website = ?, working_hours = ?, is_247 = ?, status = ?,
+        phone = ?, location = ?,
+        general_total = ?, general_available = ?, icu_total = ?, icu_available = ?,
+        emergency_total = ?, emergency_beds_available = ?, private_rooms = ?, deluxe_rooms = ?, vip_rooms = ?,
+        pricing_json = ?, lab_json = ?, pharmacy_json = ?, ambulance_json = ?, insurance_json = ?, contact_social_json = ?
+      WHERE id = ?
+    `, [
+      name || 'Hospital', logo || '', coverImage || '', about || '', type || 'private', regNumber || '',
+      estYear || '', accreditation || '', description || '', address || '', googleMapsUrl || '',
+      city || '', state || '', pincode || '', contactNumber || '', emergencyNumber || '',
+      email || '', website || '', workingHours || '24x7', is247 ? 1 : 0, status || 'draft',
+      contactNumber || '', `${address || ''}, ${city || ''}, ${state || ''}`.trim(),
+      beds?.generalTotal || 0, beds?.generalAvailable || 0, beds?.icuTotal || 0, beds?.icuAvailable || 0,
+      beds?.emergencyTotal || 0, beds?.emergencyBedsAvailable || 0, beds?.privateRooms || 0, beds?.deluxeRooms || 0, beds?.vipRooms || 0,
+      JSON.stringify(pricing || {}), JSON.stringify(lab || {}), JSON.stringify(pharmacy || {}),
+      JSON.stringify(ambulance || {}), JSON.stringify(insurance || {}), JSON.stringify(contactSocial || {}),
+      hospId
+    ]);
+
+    // Sync facilities if provided
+    if (Array.isArray(facilities)) {
+      await dbRun('DELETE FROM facilities WHERE hospital_id = ?', [hospId]);
+      for (const f of facilities) {
+        if (f && f.trim()) {
+          await dbRun('INSERT OR IGNORE INTO facilities (hospital_id, facility) VALUES (?, ?)', [hospId, f.trim()]);
+        }
+      }
+      await dbRun('UPDATE hospitals SET facilities_str = ? WHERE id = ?', [facilities.join(' • '), hospId]);
+    }
+
+    res.json({ message: `Hospital profile saved successfully as ${status === 'published' ? 'Published' : 'Draft'}.`, status });
+  } catch (err) {
+    console.error('Error saving full profile:', err);
+    res.status(500).json({ error: 'Failed to save hospital profile.' });
+  }
+});
+
+// 5. Publish Profile Endpoint
+app.post('/api/hospital-admin/publish', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) {
+    return res.status(403).json({ error: 'Access denied.' });
+  }
+
+  try {
+    await dbRun("UPDATE hospitals SET status = 'published' WHERE id = ?", [req.user.hospitalId]);
+    res.json({ message: 'Hospital profile published live successfully!', status: 'published' });
+  } catch (err) {
+    console.error('Error publishing hospital:', err);
+    res.status(500).json({ error: 'Failed to publish profile.' });
+  }
+});
+
+// 6. Departments Endpoints (Add / Delete)
+app.post('/api/hospital-admin/departments', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  const { name, description, image, floor, head } = req.body;
+  if (!name) return res.status(400).json({ error: 'Department name is required.' });
+
+  try {
+    const resDb = await dbRun(
+      'INSERT INTO departments (hospital_id, name, description, image, floor, head) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.hospitalId, name, description || '', image || '', floor || '', head || '']
+    );
+    res.status(201).json({ id: resDb.id, name, description, image, floor, head });
+  } catch (err) {
+    console.error('Error adding department:', err);
+    res.status(500).json({ error: 'Failed to add department.' });
+  }
+});
+
+app.delete('/api/hospital-admin/departments/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  try {
+    await dbRun('DELETE FROM departments WHERE id = ? AND hospital_id = ?', [req.params.id, req.user.hospitalId]);
+    res.json({ message: 'Department removed.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove department.' });
+  }
+});
+
+// 7. Doctors Admin Endpoints
+app.post('/api/hospital-admin/doctors', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  const { name, photo, qualification, exp, department, spec, fee, opdTiming, availableDays, languages, status } = req.body;
+
+  if (!name || !spec) return res.status(400).json({ error: 'Doctor name and specialization required.' });
+
+  try {
+    const resDb = await dbRun(`
+      INSERT INTO doctors (
+        hospital_id, name, photo, qualification, exp, department, spec, fee, opd_timing, available_days, languages, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      req.user.hospitalId, name, photo || '', qualification || '', exp || '5 yrs',
+      department || 'General', spec, parseInt(fee, 10) || 500,
+      opdTiming || '09:00 AM - 05:00 PM', availableDays || 'Mon-Sat',
+      languages || 'English, Hindi', status || 'Available'
+    ]);
+
+    res.status(201).json({ id: resDb.id, name, spec, status: status || 'Available' });
+  } catch (err) {
+    console.error('Error adding doctor:', err);
+    res.status(500).json({ error: 'Failed to add doctor.' });
+  }
+});
+
+app.delete('/api/hospital-admin/doctors/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  try {
+    await dbRun('DELETE FROM doctors WHERE id = ? AND hospital_id = ?', [req.params.id, req.user.hospitalId]);
+    res.json({ message: 'Doctor removed from roster.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete doctor.' });
+  }
+});
+
+// 8. Treatments Admin Endpoints
+app.post('/api/hospital-admin/treatments', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  const { name, department, description, cost, duration, category } = req.body;
+  if (!name || !cost) return res.status(400).json({ error: 'Treatment name and cost required.' });
+
+  try {
+    const treatId = `t-${Date.now()}`;
+    await dbRun(`
+      INSERT INTO treatments (id, hospital_id, name, category, department, description, cost, duration)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      treatId, req.user.hospitalId, name, category || 'General Care',
+      department || 'General', description || '', parseInt(cost, 10), duration || '1 Day'
+    ]);
+    res.status(201).json({ id: treatId, name, cost: parseInt(cost, 10) });
+  } catch (err) {
+    console.error('Error adding treatment:', err);
+    res.status(500).json({ error: 'Failed to add treatment.' });
+  }
+});
+
+app.delete('/api/hospital-admin/treatments/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  try {
+    await dbRun('DELETE FROM treatments WHERE id = ? AND hospital_id = ?', [req.params.id, req.user.hospitalId]);
+    res.json({ message: 'Treatment removed.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete treatment.' });
+  }
+});
+
+// 9. Gallery Endpoints
+app.post('/api/hospital-admin/gallery', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  const { category, imageUrl, caption } = req.body;
+  if (!imageUrl) return res.status(400).json({ error: 'Image URL/data is required.' });
+
+  try {
+    const resDb = await dbRun(
+      'INSERT INTO hospital_gallery (hospital_id, category, image_url, caption) VALUES (?, ?, ?, ?)',
+      [req.user.hospitalId, category || 'General', imageUrl, caption || '']
+    );
+    res.status(201).json({ id: resDb.id, category, imageUrl, caption });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload photo.' });
+  }
+});
+
+app.delete('/api/hospital-admin/gallery/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  try {
+    await dbRun('DELETE FROM hospital_gallery WHERE id = ? AND hospital_id = ?', [req.params.id, req.user.hospitalId]);
+    res.json({ message: 'Photo deleted.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete photo.' });
+  }
+});
+
+// 10. Awards & Certifications Endpoints
+app.post('/api/hospital-admin/awards', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  const { title, type, fileUrl, fileType, issueDate } = req.body;
+  if (!title) return res.status(400).json({ error: 'Certificate title is required.' });
+
+  try {
+    const resDb = await dbRun(
+      'INSERT INTO awards_certs (hospital_id, title, type, file_url, file_type, issue_date) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.hospitalId, title, type || 'Certificate', fileUrl || '', fileType || 'Image', issueDate || '']
+    );
+    res.status(201).json({ id: resDb.id, title, type, fileUrl });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add certificate.' });
+  }
+});
+
+app.delete('/api/hospital-admin/awards/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' || !req.user.hospitalId) return res.status(403).json({ error: 'Access denied.' });
+  try {
+    await dbRun('DELETE FROM awards_certs WHERE id = ? AND hospital_id = ?', [req.params.id, req.user.hospitalId]);
+    res.json({ message: 'Certificate removed.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove certificate.' });
+  }
+});
+
 // Start the Server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
