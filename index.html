@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HealthRought - Smart Healthcare & Hospital Finder Platform</title>
-  <meta name="description" content="HealthRought smart healthcare portal connecting patients with verified hospitals, transparent procedure costs, live bed tracking, and instant ambulance dispatch.">
+  <title>MediGo - Smart Healthcare & Hospital Finder Platform</title>
+  <meta name="description" content="MediGo smart healthcare portal connecting patients with verified hospitals, transparent procedure costs, live bed tracking, and instant ambulance dispatch.">
   <link rel="stylesheet" href="styles.css">
   <!-- Leaflet Interactive Maps Engine -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -38,7 +38,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 6v12M6 12h12"/></svg>
         </div>
         <div>
-          <div class="brand-title">HealthRought</div>
+          <div class="brand-title">MediGo</div>
           <div class="brand-subtitle">Smart Healthcare & Hospital Network</div>
         </div>
       </a>
@@ -58,8 +58,7 @@
         </button>
       </div>
 
-      <!-- Hidden Legacy Switcher Container -->
-      <div class="role-switcher" id="headerRoleSwitcher" style="display: none;"></div>
+
 
       <a href="admin.html" class="btn btn-primary" style="text-decoration: none; padding: 6px 14px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
         🏥 Hospital Admin Portal
@@ -79,7 +78,7 @@
       <div class="auth-wrapper">
         <div class="auth-card">
           <div class="auth-header">
-            <h2>Welcome to HealthRought</h2>
+            <h2>Welcome to MediGo</h2>
             <p>Access hospital search, live ICU beds, and emergency services</p>
           </div>
 
@@ -101,7 +100,7 @@
           <form id="loginForm" class="auth-form active">
             <div class="form-group">
               <label for="loginEmail">Email Address</label>
-              <input type="email" id="loginEmail" class="form-control" placeholder="patient@healthrought.com" required>
+              <input type="email" id="loginEmail" class="form-control" placeholder="patient@medigo.com" required>
             </div>
             <div class="form-group">
               <label for="loginPassword">Password</label>
@@ -126,34 +125,13 @@
               <label for="signupPassword">Password</label>
               <input type="password" id="signupPassword" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
             </div>
-            <div class="form-group">
-              <label for="signupRole">Account Role</label>
-              <select id="signupRole" class="form-select" required>
-                <option value="patient">Patient Seeking Care</option>
-                <option value="admin">Hospital Administrator</option>
-                <option value="driver">Ambulance Dispatch Driver</option>
-              </select>
-            </div>
-            <!-- Hospital Selector (visible for Admin role) -->
-            <div class="form-group" id="signupHospitalGroup" style="display: none;">
-              <label for="signupHospital">Select Assigned Hospital</label>
-              <select id="signupHospital" class="form-select">
-                <option value="hosp-gov-1">AIIMS New Delhi</option>
-                <option value="hosp-gov-2">LLRM Government Medical College</option>
-                <option value="hosp-gov-3">Dr. Ram Manohar Lohia (RML) Hospital</option>
-                <option value="hosp-1">City Care Hospital</option>
-                <option value="hosp-2">Life Line Hospital</option>
-                <option value="hosp-4">Apex Heart & General Hospital</option>
-              </select>
-            </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 10px;">Create Account</button>
           </form>
 
           <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light-border-subtle); font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quick Demo Accounts:</div>
-            <div>• <strong>Patient:</strong> <code>patient@healthrought.com</code> / <code>patient123</code></div>
-            <div>• <strong>Hospital Admin:</strong> <code>admin@citycare.com</code> / <code>admin123</code></div>
-            <div>• <strong>Ambulance Driver:</strong> <code>driver@healthrought.com</code> / <code>driver123</code></div>
+            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quick Access & Demo Accounts:</div>
+            <div>• <strong>Patient Demo:</strong> <code>patient@medigo.com</code> / <code>patient123</code></div>
+            <div style="margin-top: 4px;">• <strong>Hospital Admin:</strong> Switch to <a href="admin.html" style="color: var(--primary); font-weight: 600; text-decoration: underline;">Hospital Admin SaaS Portal</a> (Demo: <code>admin@citycare.com</code>)</div>
           </div>
         </div>
       </div>
@@ -580,49 +558,7 @@
 
     </section>
 
-    <!-- ==================== SECTION 2: HOSPITAL ADMIN DASHBOARD ==================== -->
-    <section id="adminViewSection" class="view-section">
-      <div style="margin-bottom: 1.25rem;">
-        <h2 style="font-size: 1.35rem;">Hospital Operations Dashboard</h2>
-        <p style="color: var(--text-muted); font-size: 0.88rem;">Manage live bed capacity (ICU/General/Emergency), emergency admissions, and treatment tariff prices.</p>
-      </div>
 
-      <div id="hospitalAdminContainer">
-        <!-- Rendered by hospital.js -->
-      </div>
-    </section>
-
-    <!-- ==================== SECTION 3: AMBULANCE DRIVER VIEW ==================== -->
-    <section id="driverViewSection" class="view-section">
-      <div style="max-width: 880px; margin: 0 auto;">
-        <h2 style="margin-bottom: 1rem; font-size: 1.35rem;">Ambulance Driver Live Terminal</h2>
-        <div class="card-panel" style="margin-bottom: 1.25rem; border-left: 4px solid var(--primary);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h3 style="font-size: 1.05rem;">Active Order #BK-9021</h3>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Patient: Rahul Sharma • Pickup: Shastri Nagar, Meerut</p>
-            </div>
-            <span class="badge-tag" style="background: #dcfce7; color: #15803d;">En Route to Pickup</span>
-          </div>
-        </div>
-
-        <div class="map-canvas-container" style="height: 350px;">
-          <div class="eta-float-badge">
-            GPS Active • Pickup Distance 4.2 km
-          </div>
-          <div id="driverLiveMapCanvas" style="width: 100%; height: 100%; min-height: 300px; z-index: 1;"></div>
-        </div>
-
-        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-          <button class="btn btn-primary" style="flex: 1;" onclick="alert('Status updated: Patient Boarded Ambulance!')">
-            Confirm Patient Picked Up
-          </button>
-          <button class="btn btn-outline" style="flex: 1;" onclick="alert('Navigating to Emergency Bay...')">
-            Navigate to Emergency Bay
-          </button>
-        </div>
-      </div>
-    </section>
 
   </main>
 

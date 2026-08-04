@@ -48,6 +48,15 @@
       <!-- REGISTER FORM -->
       <form id="formRegister" class="auth-form" onsubmit="handleRegister(event)">
         <div class="form-group">
+          <label>Select / Search Registered Hospital (30,000+ Database)</label>
+          <input type="text" id="regExistingHospitalSearch" list="hospitalDirectoryDatalist" class="form-control" placeholder="🔍 Search hospital name, city, or pincode..." style="margin-bottom: 6px;" oninput="onDirectoryHospitalSearch(this)" />
+          <datalist id="hospitalDirectoryDatalist"></datalist>
+          <select id="regExistingHospital" class="form-control" style="margin-bottom: 6px;">
+            <option value="">-- Or select from hospital directory dropdown --</option>
+          </select>
+          <div style="font-size: 0.75rem; color: #0284c7; font-weight: 600; margin-bottom: 8px;">✨ Auto-detects Hospital Name, Owner/Admin Name, City, State & Email from database</div>
+        </div>
+        <div class="form-group">
           <label>Hospital Name</label>
           <input type="text" id="regHospitalName" required placeholder="e.g. Metro Super Specialty Hospital" />
         </div>
@@ -72,6 +81,20 @@
         <div class="form-group">
           <label>Password</label>
           <input type="password" id="regPassword" required placeholder="Minimum 6 characters" minlength="6" />
+        </div>
+        <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 1rem;">
+          <label style="color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            🛡️ Official Hospital Verification Proof
+          </label>
+          <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 8px;">Upload establishment license or ROHINI registration to earn Verified Partner status.</div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label style="font-size: 0.8rem;">Clinical Establishment / ROHINI Registration No.</label>
+            <input type="text" id="regLicenseNumber" placeholder="e.g. ROHINI-DL-98214 / REG-2026-44" style="background: white;" />
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.8rem;">Upload Registration License (PDF / Image)</label>
+            <input type="file" id="regDocFile" accept=".pdf,.png,.jpg,.jpeg" style="background: white; padding: 6px; font-size: 0.8rem;" />
+          </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-success btn-block">Create Hospital Account</button>

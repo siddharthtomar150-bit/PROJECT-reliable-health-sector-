@@ -7,12 +7,10 @@ import {
   initLiveTrackingMap,
   renderHospitalsMap
 } from './patient.js';
-import { renderHospitalAdmin } from './hospital.js';
-
 let state = {
   hospitals: [],
   currentUser: null,
-  activeRole: 'patient', // 'patient' | 'admin' | 'driver'
+  activeRole: 'patient',
   searchKeyword: '',
   selectedState: 'all',
   selectedDistrict: 'all',
@@ -20,7 +18,6 @@ let state = {
   activeHospType: 'all', // 'all' | 'government' | 'private'
   maxBudget: 200000,
   emergencyOnly: false,
-  activeAdminHospitalId: null,
   activeTabPatient: 'search', // 'search' | 'ambulance' | 'ai' | 'records'
   metaData: { states: [], districtsByState: {} }
 };
@@ -149,11 +146,6 @@ async function fetchHospitals() {
 function updateViews() {
   // Update Patient View
   renderPatientSearch(state.hospitals, state.activeTreatmentFilter, state.maxBudget, state.emergencyOnly, state.activeHospType);
-  
-  // Update Hospital Admin View
-  if (state.activeRole === 'admin' && state.activeAdminHospitalId) {
-    renderHospitalAdmin(state.hospitals, state.activeAdminHospitalId, updateViews);
-  }
 }
 
 // Load Patient User Profile (Blood Group, Emergency Contact, Allergies)
@@ -235,68 +227,39 @@ async function checkAuth() {
 
   if (token && userJson) {
     state.currentUser = JSON.parse(userJson);
-    state.activeRole = state.currentUser.role;
-    if (state.currentUser.role === 'admin') {
-      state.activeAdminHospitalId = state.currentUser.hospitalId;
-    }
+    state.activeRole = 'patient';
 
     // Update Profile UI in header
-    document.getElementById('headerUserName').textContent = state.currentUser.name;
-    document.getElementById('headerUserRole').textContent = 
-      state.currentUser.role.toUpperCase() + 
-      (state.currentUser.hospitalId ? ` (${state.currentUser.hospitalId.replace('hosp-', '').toUpperCase()})` : '');
+    const headerName = document.getElementById('headerUserName');
+    const headerRole = document.getElementById('headerUserRole');
+    if (headerName) headerName.textContent = state.currentUser.name;
+    if (headerRole) headerRole.textContent = 'PATIENT';
     
-    document.getElementById('userProfileHeader').style.display = 'flex';
-    document.getElementById('authSection').style.display = 'none';
+    const profileHeader = document.getElementById('userProfileHeader');
+    const authSec = document.getElementById('authSection');
+    const patientSec = document.getElementById('patientViewSection');
+    const emergencyRib = document.getElementById('emergencyRibbon');
 
-    // Show/Hide dashboards based on role
-    document.getElementById('patientViewSection').classList.remove('active');
-    document.getElementById('adminViewSection').classList.remove('active');
-    document.getElementById('driverViewSection').classList.remove('active');
+    if (profileHeader) profileHeader.style.display = 'flex';
+    if (authSec) authSec.style.display = 'none';
+    if (patientSec) patientSec.classList.add('active');
+    if (emergencyRib) emergencyRib.style.display = 'flex';
 
-    if (state.activeRole === 'patient') {
-      document.getElementById('patientViewSection').classList.add('active');
-      document.getElementById('emergencyRibbon').style.display = 'flex';
-      await loadDashboardData();
-    } else if (state.activeRole === 'admin') {
-      document.getElementById('adminViewSection').classList.add('active');
-      document.getElementById('emergencyRibbon').style.display = 'none';
-      await loadDashboardData();
-    } else if (state.activeRole === 'driver') {
-      document.getElementById('driverViewSection').classList.add('active');
-      document.getElementById('emergencyRibbon').style.display = 'none';
-      initLiveTrackingMap('driverLiveMapCanvas', 12);
-      loadDriverBookings();
-    }
+    await loadDashboardData();
   } else {
     // Show auth card and hide other modules
-    document.getElementById('authSection').style.display = 'block';
-    document.getElementById('authSection').classList.add('active');
-    document.getElementById('userProfileHeader').style.display = 'none';
-    document.getElementById('emergencyRibbon').style.display = 'none';
-    
-    document.getElementById('patientViewSection').classList.remove('active');
-    document.getElementById('adminViewSection').classList.remove('active');
-    document.getElementById('driverViewSection').classList.remove('active');
-  }
-}
+    const authSec = document.getElementById('authSection');
+    const profileHeader = document.getElementById('userProfileHeader');
+    const emergencyRib = document.getElementById('emergencyRibbon');
+    const patientSec = document.getElementById('patientViewSection');
 
-// Fetch all bookings for drivers
-async function loadDriverBookings() {
-  try {
-    const res = await fetch('/api/bookings', {
-      headers: getAuthHeaders()
-    });
-    if (res.ok) {
-      const bookings = await res.json();
-      const activeBooking = bookings.find(b => b.status === 'En Route' || b.status === 'Pending');
-      if (activeBooking) {
-        // Render driver terminal metrics based on active dispatch
-        showToast(`Active Dispatch Found! #${activeBooking.id}`, 'warning');
-      }
+    if (authSec) {
+      authSec.style.display = 'block';
+      authSec.classList.add('active');
     }
-  } catch (err) {
-    console.error('Error fetching driver bookings:', err);
+    if (profileHeader) profileHeader.style.display = 'none';
+    if (emergencyRib) emergencyRib.style.display = 'none';
+    if (patientSec) patientSec.classList.remove('active');
   }
 }
 
@@ -304,10 +267,8 @@ async function loadDashboardData() {
   await fetchHospitalMeta();
   await fetchHospitals();
   updateViews();
-  if (state.activeRole === 'patient') {
-    loadUserProfile();
-    loadHealthRecords();
-  }
+  loadUserProfile();
+  loadHealthRecords();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -337,19 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Show/Hide hospital selection based on signup role selection
-  const signupRole = document.getElementById('signupRole');
-  const signupHospitalGroup = document.getElementById('signupHospitalGroup');
-  if (signupRole && signupHospitalGroup) {
-    signupRole.addEventListener('change', (e) => {
-      if (e.target.value === 'admin') {
-        signupHospitalGroup.style.display = 'block';
-      } else {
-        signupHospitalGroup.style.display = 'none';
-      }
-    });
-  }
-
   // Login submission
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -363,18 +311,21 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-        
         const data = await res.json();
         if (res.ok) {
+          if (data.user.role !== 'patient') {
+             showToast('This portal is for patients only.', 'danger');
+             return;
+          }
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
-          showToast('Signed in successfully!', 'success');
+          showToast('Logged in successfully', 'success');
           checkAuth();
         } else {
-          showToast(data.error || 'Invalid credentials', 'danger');
+          showToast(data.error || 'Login failed', 'danger');
         }
       } catch (err) {
-        console.error('Login submit error:', err);
+        console.error('Login error:', err);
         showToast('Server connection error', 'danger');
       }
     });
@@ -387,14 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = document.getElementById('signupName').value;
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
-      const role = signupRole.value;
-      const hospitalId = role === 'admin' ? document.getElementById('signupHospital').value : null;
 
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password, role, hospitalId })
+          body: JSON.stringify({ name, email, password, role: 'patient' })
         });
 
         const data = await res.json();

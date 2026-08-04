@@ -9,7 +9,7 @@ import shutil
 from database_pg import init_db, get_db, HospitalModel
 
 app = FastAPI(
-    title="HealthRought Healthcare API",
+    title="MediGo Healthcare API",
     description="FastAPI REST API powering Smart Hospital Finder with real PostgreSQL hospital data",
     version="1.0.0"
 )
@@ -32,7 +32,7 @@ def startup_db_init():
 def read_root():
     return {
         "status": "online",
-        "service": "HealthRought FastAPI Hospital Search Service",
+        "service": "MediGo FastAPI Hospital Search Service",
         "docs_url": "/docs"
     }
 

@@ -166,6 +166,9 @@ export async function initDb() {
     if (!colNames.includes('ambulance_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN ambulance_json TEXT');
     if (!colNames.includes('insurance_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN insurance_json TEXT');
     if (!colNames.includes('contact_social_json')) await dbRun('ALTER TABLE hospitals ADD COLUMN contact_social_json TEXT');
+    if (!colNames.includes('owner_name')) await dbRun('ALTER TABLE hospitals ADD COLUMN owner_name TEXT');
+    if (!colNames.includes('verification_status')) await dbRun("ALTER TABLE hospitals ADD COLUMN verification_status TEXT DEFAULT 'verified'");
+    if (!colNames.includes('verification_doc_ref')) await dbRun('ALTER TABLE hospitals ADD COLUMN verification_doc_ref TEXT');
 
     // 3. Create Departments Table
     await dbRun(`
@@ -361,23 +364,11 @@ export async function initDb() {
 
       const saltRounds = 10;
       const patientPassword = await bcrypt.hash('patient123', saltRounds);
-      const adminPassword = await bcrypt.hash('admin123', saltRounds);
-      const driverPassword = await bcrypt.hash('driver123', saltRounds);
 
       const userPatientRes = await dbRun(`
         INSERT INTO users (name, email, password, role)
         VALUES (?, ?, ?, ?)
-      `, ['Rahul Sharma', 'patient@healthrought.com', patientPassword, 'patient']);
-
-      await dbRun(`
-        INSERT INTO users (name, email, password, role, hospital_id)
-        VALUES (?, ?, ?, ?, ?)
-      `, ['City Care Admin', 'admin@citycare.com', adminPassword, 'admin', 'hosp-1']);
-
-      await dbRun(`
-        INSERT INTO users (name, email, password, role)
-        VALUES (?, ?, ?, ?)
-      `, ['Driver Ramesh', 'driver@healthrought.com', driverPassword, 'driver']);
+      `, ['Rahul Sharma', 'patient@medigo.com', patientPassword, 'patient']);
 
       for (const b of INITIAL_BOOKINGS) {
         await dbRun(`

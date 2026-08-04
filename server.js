@@ -8,7 +8,7 @@ import { initDb, dbGet, dbAll, dbRun } from './database.js';
 import { SYMPTOM_DATABASE, DISEASE_DATABASE } from './data.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const JWT_SECRET = 'healthrought_super_secret_jwt_key_2026';
+const JWT_SECRET = 'medigo_super_secret_jwt_key_2026';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,12 +44,13 @@ function authenticateToken(req, res, next) {
 
 // ==================== AUTHENTICATION API ====================
 
-// 1. Register User
+// 1. Register User (Patient Portal)
 app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password, role, hospitalId } = req.body;
+  const { name, email, password } = req.body;
+  const role = 'patient';
 
-  if (!name || !email || !password || !role) {
-    return res.status(400).json({ error: 'Please provide name, email, password and role.' });
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Please provide name, email, and password.' });
   }
 
   try {
@@ -63,15 +64,15 @@ app.post('/api/auth/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert user
+    // Insert user as patient
     const result = await dbRun(
-      'INSERT INTO users (name, email, password, role, hospital_id) VALUES (?, ?, ?, ?, ?)',
-      [name, email, hashedPassword, role, hospitalId || null]
+      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+      [name, email, hashedPassword, role]
     );
 
     // Create Token
     const token = jwt.sign(
-      { id: result.id, name, email, role, hospitalId },
+      { id: result.id, name, email, role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -79,7 +80,7 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { id: result.id, name, email, role, hospitalId }
+      user: { id: result.id, name, email, role }
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -193,7 +194,7 @@ app.get('/api/hospitals', async (req, res) => {
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-    const numLimit = Math.min(parseInt(limit, 10) || 100, 500);
+    const numLimit = parseInt(limit, 10) || 100;
     const numOffset = parseInt(offset, 10) || 0;
 
     const hospitals = await dbAll(`SELECT * FROM hospitals ${whereSql} LIMIT ? OFFSET ?`, [...params, numLimit, numOffset]);
@@ -202,12 +203,37 @@ app.get('/api/hospitals', async (req, res) => {
       return res.json([]);
     }
 
-    const hospIds = hospitals.map(h => h.id);
-    const placeholders = hospIds.map(() => '?').join(',');
+    if (req.query.lite === 'true') {
+      return res.json(hospitals);
+    }
 
-    const treatments = await dbAll(`SELECT * FROM treatments WHERE hospital_id IN (${placeholders})`, hospIds);
-    const doctors = await dbAll(`SELECT * FROM doctors WHERE hospital_id IN (${placeholders})`, hospIds);
-    const facilities = await dbAll(`SELECT * FROM facilities WHERE hospital_id IN (${placeholders})`, hospIds);
+    const hospIds = hospitals.map(h => h.id);
+    
+    // Process in chunks to avoid SQLite 999 parameter limit if needed, 
+    // but typically non-lite requests have a small limit.
+    const chunkSize = 800;
+    let allTreatments = [];
+    let allDoctors = [];
+    let allDepts = [];
+    let allFacilities = [];
+
+    for (let i = 0; i < hospIds.length; i += chunkSize) {
+      const chunk = hospIds.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(',');
+      
+      const t = await dbAll(`SELECT * FROM treatments WHERE hospital_id IN (${placeholders})`, chunk);
+      const d = await dbAll(`SELECT * FROM doctors WHERE hospital_id IN (${placeholders})`, chunk);
+      const dep = await dbAll(`SELECT * FROM departments WHERE hospital_id IN (${placeholders})`, chunk);
+      const f = await dbAll(`SELECT * FROM facilities WHERE hospital_id IN (${placeholders})`, chunk);
+
+      allTreatments.push(...t);
+      allDoctors.push(...d);
+      allDepts.push(...dep);
+      allFacilities.push(...f);
+    }
+    const facilities = allFacilities;
+    const treatments = allTreatments;
+    const doctors = allDoctors;
 
     const result = hospitals.map(h => {
       const ambulanceUnits = h.type === 'government' 
@@ -509,18 +535,10 @@ app.delete('/api/hospitals/:id/facilities/:facility', authenticateToken, async (
 
 // ==================== BOOKINGS API ====================
 
-// Get bookings based on user role
+// Get bookings for logged-in patient
 app.get('/api/bookings', authenticateToken, async (req, res) => {
   try {
-    let bookings;
-    if (req.user.role === 'patient') {
-      bookings = await dbAll('SELECT * FROM bookings WHERE patient_name = ?', [req.user.name]);
-    } else if (req.user.role === 'admin') {
-      bookings = await dbAll('SELECT * FROM bookings WHERE hospital_id = ?', [req.user.hospitalId]);
-    } else {
-      // Driver gets all bookings (or active ones)
-      bookings = await dbAll('SELECT * FROM bookings');
-    }
+    const bookings = await dbAll('SELECT * FROM bookings WHERE patient_name = ?', [req.user.name]);
     res.json(bookings);
   } catch (err) {
     console.error('Error retrieving bookings:', err);
@@ -528,13 +546,9 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
   }
 });
 
-// Create Booking (Patient only)
+// Create Booking (Patient)
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   const { hospitalId, hospitalName, ambulanceType, pickupLocation, dropLocation, fare } = req.body;
-
-  if (req.user.role !== 'patient') {
-    return res.status(403).json({ error: 'Only patients can book ambulances.' });
-  }
 
   try {
     const bookingId = 'BK-' + Math.floor(1000 + Math.random() * 9000);
@@ -791,11 +805,11 @@ app.post('/api/symptoms/check', async (req, res) => {
 
 // ==================== HOSPITAL ADMIN DASHBOARD API ====================
 
-// 1. Register Hospital Admin and Create Blank Hospital Profile
+// 1. Register Hospital Admin and Create/Link Hospital Profile
 app.post('/api/auth/register-hospital', async (req, res) => {
-  const { name, email, password, hospitalName, city, state } = req.body;
+  const { name, email, password, hospitalName, city, state, existingHospitalId, licenseNumber, verificationDoc } = req.body;
 
-  if (!name || !email || !password || !hospitalName) {
+  if (!name || !email || !password || (!hospitalName && !existingHospitalId)) {
     return res.status(400).json({ error: 'Please provide admin name, email, password, and hospital name.' });
   }
 
@@ -807,32 +821,53 @@ app.post('/api/auth/register-hospital', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const hospitalId = `hosp-admin-${Date.now()}`;
+    let hospitalId = existingHospitalId;
+    const verStatus = (licenseNumber || verificationDoc) ? 'verified' : 'pending';
 
-    // Create Blank Hospital Profile with draft status (No dummy data forced)
-    await dbRun(`
-      INSERT INTO hospitals (
-        id, name, tagline, badge, type, rating, review_count, distance_km,
-        location, lat, lng, phone, emergency_available, estimated_avg_cost,
-        icu_total, icu_available, emergency_total, emergency_beds_available,
-        general_total, general_available, opd_wait_time_mins, state, district, pincode,
-        specialties, facilities_str, status, city, is_247
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      hospitalId,
-      hospitalName,
-      'Hospital Profile Draft',
-      '🏥 Private Hospital',
-      'private',
-      5.0, 0, 1.0,
-      `${city || ''}, ${state || ''}`.trim(),
-      28.6139, 77.2090,
-      '',
-      1, 0,
-      0, 0, 0, 0, 0, 0, 15,
-      state || '', city || '', '',
-      '', '', 'draft', city || '', 1
-    ]);
+    if (hospitalId) {
+      const existingHosp = await dbGet('SELECT * FROM hospitals WHERE id = ?', [hospitalId]);
+      if (existingHosp) {
+        // Update existing hospital with admin verification info
+        await dbRun(`
+          UPDATE hospitals 
+          SET owner_name = ?, reg_number = COALESCE(NULLIF(?, ''), reg_number), 
+              verification_doc_ref = COALESCE(NULLIF(?, ''), verification_doc_ref), 
+              verification_status = ? 
+          WHERE id = ?
+        `, [name, licenseNumber || '', verificationDoc || '', verStatus, hospitalId]);
+      } else {
+        hospitalId = null;
+      }
+    }
+
+    if (!hospitalId) {
+      hospitalId = `hosp-admin-${Date.now()}`;
+      // Create Hospital Profile with verification status
+      await dbRun(`
+        INSERT INTO hospitals (
+          id, name, tagline, badge, type, rating, review_count, distance_km,
+          location, lat, lng, phone, emergency_available, estimated_avg_cost,
+          icu_total, icu_available, emergency_total, emergency_beds_available,
+          general_total, general_available, opd_wait_time_mins, state, district, pincode,
+          specialties, facilities_str, status, city, is_247, owner_name, reg_number, verification_doc_ref, verification_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        hospitalId,
+        hospitalName,
+        'Hospital Profile Draft',
+        '🏥 Private Hospital',
+        'private',
+        5.0, 0, 1.0,
+        `${city || ''}, ${state || ''}`.trim(),
+        28.6139, 77.2090,
+        '',
+        1, 0,
+        0, 0, 0, 0, 0, 0, 15,
+        state || '', city || '', '',
+        '', '', 'draft', city || '', 1,
+        name, licenseNumber || '', verificationDoc || '', verStatus
+      ]);
+    }
 
     // Insert Admin User
     const userResult = await dbRun(

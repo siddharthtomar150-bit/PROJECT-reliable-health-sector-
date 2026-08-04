@@ -28,6 +28,7 @@ let state = {
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
   renderFacilitiesCheckboxes();
+  loadRegisteredHospitalsDropdown();
   if (state.token) {
     checkAuth();
   } else {
@@ -52,6 +53,98 @@ function switchAuthTab(tab) {
   document.getElementById('btnTabRegister').classList.toggle('active', tab === 'register');
   document.getElementById('formLogin').classList.toggle('active', tab === 'login');
   document.getElementById('formRegister').classList.toggle('active', tab === 'register');
+  if (tab === 'register') {
+    loadRegisteredHospitalsDropdown();
+  }
+}
+
+let allDirectoryHospitals = [];
+
+async function loadRegisteredHospitalsDropdown() {
+  const select = document.getElementById('regExistingHospital');
+  const datalist = document.getElementById('hospitalDirectoryDatalist');
+  if (!select || (select.options.length > 1 && datalist && datalist.options.length > 0)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/hospitals?limit=50000&lite=true`);
+    if (res.ok) {
+      allDirectoryHospitals = await res.json();
+
+      // Populate Select Dropdown
+      select.innerHTML = '<option value="">-- Select Existing Hospital from Directory (30,000+ Database) --</option>' +
+        allDirectoryHospitals.map(h => `<option value="${h.id}">${h.name} (${h.city || h.district || h.state || 'India'})</option>`).join('');
+
+      // Populate Datalist for Search
+      if (datalist) {
+        datalist.innerHTML = allDirectoryHospitals.map(h => `<option value="${h.name} (${h.city || h.district || h.state || 'India'})" data-id="${h.id}">${h.name}</option>`).join('');
+      }
+
+      select.onchange = (e) => {
+        selectAndAutoDetectHospital(e.target.value);
+      };
+    }
+  } catch (err) {
+    console.error('Error loading directory dropdown:', err);
+  }
+}
+
+function onDirectoryHospitalSearch(input) {
+  const val = input.value.trim().toLowerCase();
+  if (!val) return;
+
+  const found = allDirectoryHospitals.find(h => 
+    h.name.toLowerCase() === val ||
+    `${h.name} (${h.city || h.district || h.state || 'India'})`.toLowerCase() === val
+  );
+
+  if (found) {
+    document.getElementById('regExistingHospital').value = found.id;
+    selectAndAutoDetectHospital(found.id);
+  }
+}
+
+function autoDetectHospitalOwner(hosp) {
+  if (hosp.owner_name) return hosp.owner_name;
+  if (hosp.admin_name) return hosp.admin_name;
+  if (hosp.doctors && hosp.doctors.length > 0 && hosp.doctors[0].name) {
+    return hosp.doctors[0].name;
+  }
+  if (hosp.tagline && hosp.tagline.includes('Dr.')) {
+    const match = hosp.tagline.match(/(Dr\.\s+[A-Za-z\s\.]+)/);
+    if (match) return match[1].trim();
+  }
+  const cleanName = (hosp.name || '').replace(/(Hospital|Medical|College|Institute|Center|Centre|Super|Specialty|Govt|Government|Private|Pvt|Ltd)/gi, '').trim();
+  return `Dr. ${cleanName || 'Medical Director'} (Administrator)`;
+}
+
+function selectAndAutoDetectHospital(hospitalId) {
+  if (!hospitalId) return;
+  const hosp = allDirectoryHospitals.find(h => h.id === hospitalId);
+  if (!hosp) return;
+
+  // Auto fill Hospital Name
+  const nameInput = document.getElementById('regHospitalName');
+  if (nameInput) nameInput.value = hosp.name || '';
+
+  // Auto Detect Owner / Administrator Name
+  const adminInput = document.getElementById('regAdminName');
+  if (adminInput) adminInput.value = autoDetectHospitalOwner(hosp);
+
+  // Auto fill City & State
+  const cityInput = document.getElementById('regCity');
+  if (cityInput) cityInput.value = hosp.city || hosp.district || '';
+
+  const stateInput = document.getElementById('regState');
+  if (stateInput) stateInput.value = hosp.state || '';
+
+  // Auto fill Work Email
+  const emailInput = document.getElementById('regEmail');
+  if (emailInput && (!emailInput.value || emailInput.value.includes('@metrohospital.com'))) {
+    const slug = (hosp.name || 'hospital').toLowerCase().replace(/[^a-z0-9]/g, '');
+    emailInput.value = hosp.email || `admin@${slug || 'medigo'}.com`;
+  }
+
+  showToast(`Auto-detected details for ${hosp.name}!`, 'success');
 }
 
 function showAuthModal() {
@@ -126,21 +219,36 @@ async function handleLogin(e) {
   }
 }
 
+function readDocFileAsBase64(file) {
+  return new Promise((resolve) => {
+    if (!file) return resolve('');
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
 // Handle Hospital Registration
 async function handleRegister(e) {
   e.preventDefault();
+  const existingSelect = document.getElementById('regExistingHospital');
+  const existingHospitalId = existingSelect ? existingSelect.value : '';
   const hospitalName = document.getElementById('regHospitalName').value.trim();
   const name = document.getElementById('regAdminName').value.trim();
   const city = document.getElementById('regCity').value.trim();
   const stateVal = document.getElementById('regState').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
+  const licenseNumber = document.getElementById('regLicenseNumber') ? document.getElementById('regLicenseNumber').value.trim() : '';
+  const fileInput = document.getElementById('regDocFile');
+  const verificationDoc = fileInput && fileInput.files.length > 0 ? await readDocFileAsBase64(fileInput.files[0]) : '';
 
   try {
     const res = await fetch(`${API_BASE}/auth/register-hospital`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hospitalName, name, city, state: stateVal, email, password })
+      body: JSON.stringify({ hospitalName, name, city, state: stateVal, email, password, existingHospitalId, licenseNumber, verificationDoc })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');

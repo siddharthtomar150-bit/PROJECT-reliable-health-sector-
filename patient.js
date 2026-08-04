@@ -1,4 +1,4 @@
-// Patient Experience Module - HealthRought Platform
+// Patient Experience Module - MediGo Platform
 
 let compareList = [];
 
@@ -40,6 +40,8 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
   container.innerHTML = filtered.map(h => {
     const isCompared = compareList.some(item => item.id === h.id);
     const isGovt = h.type === 'government';
+    const isVerified = h.verification_status === 'verified' || h.reg_number || h.type === 'government' || h.status === 'published';
+
     return `
       <div class="hospital-card" id="card-${h.id}">
         <div class="hospital-card-header">
@@ -47,6 +49,7 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
             <h3>
               ${h.name} 
               <span class="badge-tag ${isGovt ? 'govt' : 'pvt'}">${h.badge}</span>
+              ${isVerified ? `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; margin-left: 4px;">🛡️ Verified Partner</span>` : ''}
             </h3>
             <p class="hospital-tagline">${h.tagline} • 📍 ${h.location}</p>
             ${h.specialties ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 4px;"><strong>Specialties:</strong> ${h.specialties}</div>` : ''}

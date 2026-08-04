@@ -1,4 +1,4 @@
-/* HealthRought - Professional Medical & Healthcare Portal System */
+/* MediGo - Professional Medical & Healthcare Portal System */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 :root {
@@ -469,6 +469,8 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   max-width: 440px;
   padding: 2.25rem;
+  max-height: 88vh;
+  overflow-y: auto;
 }
 
 .auth-header {

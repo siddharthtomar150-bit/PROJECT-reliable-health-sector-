@@ -1,4 +1,4 @@
-// Initial Data Store for HealthRought Platform (Real Govt & Private Hospitals)
+// Initial Data Store for MediGo Platform (Real Govt & Private Hospitals)
 
 export const INITIAL_HOSPITALS = [
   {

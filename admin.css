@@ -260,16 +260,27 @@ input:focus, select:focus, textarea:focus {
   justify-content: center;
   z-index: 9999;
   padding: 20px;
+  overflow-y: auto;
 }
 
 .auth-card {
   background: #ffffff;
   width: 100%;
   max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 36px 32px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.auth-card::-webkit-scrollbar {
+  width: 6px;
+}
+.auth-card::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .auth-header {
