@@ -40,6 +40,20 @@ export function dbRun(sql, params = []) {
   });
 }
 
+// DPDP / HIPAA Compliant Audit Logger
+export async function logPrivacyAudit(userId, actorName, actorRole, action, details = '', ipAddress = '127.0.0.1', status = 'SUCCESS') {
+  try {
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await dbRun(`
+      INSERT INTO privacy_audit_logs (user_id, actor_name, actor_role, action, details, ip_address, timestamp, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [userId, actorName, actorRole, action, details, ipAddress, timestamp, status]);
+  } catch (err) {
+    console.error('Failed to write privacy audit log:', err);
+  }
+}
+
+
 // RFC 4180 compliant CSV parser
 function parseCSV(text) {
   const rows = [];
@@ -304,6 +318,71 @@ export async function initDb() {
         summary TEXT,
         file_ref TEXT,
         blood_group TEXT,
+        is_encrypted INTEGER DEFAULT 1,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 11. Create Privacy & Security Audit Logs Table (DPDP / HIPAA Compliant)
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS privacy_audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        actor_name TEXT NOT NULL,
+        actor_role TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        ip_address TEXT,
+        timestamp TEXT NOT NULL,
+        status TEXT DEFAULT 'SUCCESS',
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 12. Create Patient Privacy Settings & Consent Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS patient_privacy_settings (
+        user_id INTEGER PRIMARY KEY,
+        emergency_sos_auto_share INTEGER DEFAULT 1,
+        mask_contact_details INTEGER DEFAULT 1,
+        emergency_pin TEXT DEFAULT '1234',
+        allow_research_analytics INTEGER DEFAULT 0,
+        consent_token TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 13. Create Patient Health Schemes & Digital KYC Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS patient_schemes_kyc (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER,
+        scheme_type TEXT NOT NULL,
+        scheme_name TEXT NOT NULL,
+        beneficiary_name TEXT NOT NULL,
+        card_number TEXT NOT NULL,
+        id_proof_type TEXT,
+        id_proof_number TEXT,
+        coverage_amount INTEGER DEFAULT 500000,
+        valid_till TEXT,
+        kyc_status TEXT DEFAULT 'verified',
+        verification_doc_ref TEXT,
+        verified_at TEXT,
+        family_members_count INTEGER DEFAULT 1,
+        notes TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 14. Create Patient Favorite & Bookmarked Hospitals Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS patient_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        hospital_id TEXT NOT NULL,
+        created_at TEXT,
+        UNIQUE(user_id, hospital_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -318,6 +397,60 @@ export async function initDb() {
     const recCols = await dbAll("PRAGMA table_info(health_records)");
     const recColNames = recCols.map(c => c.name);
     if (!recColNames.includes('blood_group')) await dbRun('ALTER TABLE health_records ADD COLUMN blood_group TEXT');
+    if (!recColNames.includes('is_encrypted')) await dbRun('ALTER TABLE health_records ADD COLUMN is_encrypted INTEGER DEFAULT 1');
+
+    // Seed default sample KYC schemes for demo patient if empty
+    const kycCount = await dbGet('SELECT COUNT(*) as count FROM patient_schemes_kyc');
+    if (kycCount.count === 0) {
+      const demoUser = await dbGet('SELECT id FROM users WHERE email = ?', ['patient@medigo.com']);
+      const patientId = demoUser ? demoUser.id : 1;
+
+      await dbRun(`
+        INSERT OR IGNORE INTO patient_schemes_kyc (
+          id, user_id, scheme_type, scheme_name, beneficiary_name, card_number,
+          id_proof_type, id_proof_number, coverage_amount, valid_till, kyc_status,
+          verified_at, family_members_count, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'KYC-PMJAY-101',
+        patientId,
+        'pmjay',
+        'Ayushman Bharat - PM-JAY (Pradhan Mantri Jan Arogya Yojana)',
+        'Rahul Sharma',
+        'PMJAY-9842-7105-3318',
+        'Aadhaar Card',
+        'XXXX-XXXX-8912',
+        500000,
+        '2028-12-31',
+        'verified',
+        new Date().toISOString().slice(0, 10),
+        4,
+        'Active Golden Card Verified with Aadhaar biometric e-KYC.'
+      ]);
+
+      await dbRun(`
+        INSERT OR IGNORE INTO patient_schemes_kyc (
+          id, user_id, scheme_type, scheme_name, beneficiary_name, card_number,
+          id_proof_type, id_proof_number, coverage_amount, valid_till, kyc_status,
+          verified_at, family_members_count, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'KYC-ABHA-102',
+        patientId,
+        'abha',
+        'ABHA Health Account (Ayushman Bharat Digital Mission)',
+        'Rahul Sharma',
+        '91-4589-2314-8790',
+        'Aadhaar OTP',
+        'rahul.sharma@abdm',
+        0,
+        'Lifetime',
+        'verified',
+        new Date().toISOString().slice(0, 10),
+        1,
+        'Universal Health Identifier linked with ABHA Address rahul.sharma@abdm.'
+      ]);
+    }
 
     // Check if default users exist
     const userCount = await dbGet('SELECT COUNT(*) as count FROM users');

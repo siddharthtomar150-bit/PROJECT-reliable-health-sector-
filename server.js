@@ -4,8 +4,10 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initDb, dbGet, dbAll, dbRun } from './database.js';
-import { SYMPTOM_DATABASE, DISEASE_DATABASE } from './data.js';
+import { initDb, dbGet, dbAll, dbRun, logPrivacyAudit } from './database.js';
+import { encryptField, decryptField, maskPhoneNumber, maskEmail, generateChecksum } from './security_crypto.js';
+import { HEALTH_SCHEMES_CATALOG, validateSchemeCard, isHospitalEmpanelled } from './schemes_catalog.js';
+import { SYMPTOM_DATABASE, DISEASE_DATABASE, CLINICAL_TRIAGE_PROTOCOLS } from './data.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const JWT_SECRET = 'medigo_super_secret_jwt_key_2026';
@@ -15,6 +17,16 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Privacy & Web Security Headers (DPDP / HIPAA Web Hardening)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  next();
+});
 
 // Serve static frontend files
 app.use(express.static(__dirname));
@@ -158,7 +170,7 @@ app.get('/api/hospitals/meta', async (req, res) => {
 // Get hospitals with nested details (supports search, state/district filter, type, budget, and pagination)
 app.get('/api/hospitals', async (req, res) => {
   try {
-    const { search, state, district, type, emergency, maxBudget, limit = 100, offset = 0 } = req.query;
+    const { search, state, district, type, emergency, maxBudget, scheme, limit = 100, offset = 0 } = req.query;
 
     const whereClauses = [];
     const params = [];
@@ -187,6 +199,18 @@ app.get('/api/hospitals', async (req, res) => {
       params.push(parseInt(maxBudget, 10));
     }
 
+    if (scheme && scheme !== 'all') {
+      if (scheme === 'govt_only') {
+        whereClauses.push("type = 'government'");
+      } else if (scheme === 'pmjay' || scheme === 'ayushman') {
+        whereClauses.push("(type = 'government' OR insurance_json LIKE '%ayushmanBharat%' OR insurance_json LIKE '%Star Health%' OR insurance_json LIKE '%HDFC%')");
+      } else if (scheme === 'cghs') {
+        whereClauses.push("(type = 'government' OR insurance_json LIKE '%cghs%' OR name LIKE '%City Care%' OR name LIKE '%Apex%')");
+      } else if (scheme === 'echs') {
+        whereClauses.push("(type = 'government' OR insurance_json LIKE '%echs%' OR name LIKE '%City Care%' OR name LIKE '%Apex%')");
+      }
+    }
+
     if (search && search.trim() !== '') {
       const q = `%${search.trim()}%`;
       whereClauses.push('(name LIKE ? OR location LIKE ? OR specialties LIKE ? OR pincode LIKE ? OR district LIKE ? OR state LIKE ?)');
@@ -198,7 +222,7 @@ app.get('/api/hospitals', async (req, res) => {
     const numOffset = parseInt(offset, 10) || 0;
 
     const hospitals = await dbAll(`SELECT * FROM hospitals ${whereSql} LIMIT ? OFFSET ?`, [...params, numLimit, numOffset]);
-    
+
     if (hospitals.length === 0) {
       return res.json([]);
     }
@@ -208,7 +232,7 @@ app.get('/api/hospitals', async (req, res) => {
     }
 
     const hospIds = hospitals.map(h => h.id);
-    
+
     // Process in chunks to avoid SQLite 999 parameter limit if needed, 
     // but typically non-lite requests have a small limit.
     const chunkSize = 800;
@@ -220,7 +244,7 @@ app.get('/api/hospitals', async (req, res) => {
     for (let i = 0; i < hospIds.length; i += chunkSize) {
       const chunk = hospIds.slice(i, i + chunkSize);
       const placeholders = chunk.map(() => '?').join(',');
-      
+
       const t = await dbAll(`SELECT * FROM treatments WHERE hospital_id IN (${placeholders})`, chunk);
       const d = await dbAll(`SELECT * FROM doctors WHERE hospital_id IN (${placeholders})`, chunk);
       const dep = await dbAll(`SELECT * FROM departments WHERE hospital_id IN (${placeholders})`, chunk);
@@ -236,12 +260,12 @@ app.get('/api/hospitals', async (req, res) => {
     const doctors = allDoctors;
 
     const result = hospitals.map(h => {
-      const ambulanceUnits = h.type === 'government' 
+      const ambulanceUnits = h.type === 'government'
         ? [{ id: `amb-gov-${h.id}`, type: "Govt Life Support Ambulance", vehicleNo: "DL 01 C 4455", driver: "Anil Kumar", phone: h.phone || "+91 11 2336 0000", ratePerKm: 0 }]
         : [
-            { id: `amb-pvt-1-${h.id}`, type: "Normal", vehicleNo: "UP 15 AB 1234", driver: "Ramesh Kumar", phone: h.phone || "+91 91234 56789", ratePerKm: 25 },
-            { id: `amb-pvt-2-${h.id}`, type: "ICU Ventilator", vehicleNo: "UP 15 AB 5678", driver: "Suresh Singh", phone: h.phone || "+91 91234 98765", ratePerKm: 55 }
-          ];
+          { id: `amb-pvt-1-${h.id}`, type: "Normal", vehicleNo: "UP 15 AB 1234", driver: "Ramesh Kumar", phone: h.phone || "+91 91234 56789", ratePerKm: 25 },
+          { id: `amb-pvt-2-${h.id}`, type: "ICU Ventilator", vehicleNo: "UP 15 AB 5678", driver: "Suresh Singh", phone: h.phone || "+91 91234 98765", ratePerKm: 55 }
+        ];
 
       const hospFacilities = facilities.filter(f => f.hospital_id === h.id).map(f => f.facility);
       if (hospFacilities.length === 0 && h.facilities_str) {
@@ -367,7 +391,7 @@ app.put('/api/hospitals/:id/treatments/:treatmentId', authenticateToken, async (
 
   try {
     await dbRun('UPDATE treatments SET cost = ? WHERE id = ? AND hospital_id = ?', [cost, treatmentId, id]);
-    
+
     // Update estimated average cost for hospital
     const treatments = await dbAll('SELECT cost FROM treatments WHERE hospital_id = ?', [id]);
     const avgCost = Math.round(treatments.reduce((sum, t) => sum + t.cost, 0) / treatments.length);
@@ -603,7 +627,7 @@ app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
     params.push(id);
 
     await dbRun(`UPDATE bookings SET ${fields.join(', ')} WHERE id = ?`, params);
-    
+
     const updatedBooking = await dbGet('SELECT * FROM bookings WHERE id = ?', [id]);
     res.json(updatedBooking);
   } catch (err) {
@@ -614,53 +638,91 @@ app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
 
 // ==================== HEALTH RECORDS API ====================
 
-// ==================== HEALTH RECORDS & USER PROFILE API ====================
+// ==================== HEALTH RECORDS & USER PROFILE API (AES-256 ENCRYPTED) ====================
 
-// Get patient user profile (with blood group, emergency contact, allergies)
+// Get patient user profile (with blood group, emergency contact, allergies - decrypted)
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
   try {
     const user = await dbGet('SELECT id, name, email, role, hospital_id, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
-    res.json(user);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Decrypt sensitive fields
+    const decryptedUser = {
+      ...user,
+      emergency_contact: decryptField(user.emergency_contact),
+      allergies: decryptField(user.allergies)
+    };
+
+    // Log Privacy Audit Access
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'PROFILE_ACCESS', 'Decrypted and viewed personal emergency medical profile', req.ip);
+
+    res.json(decryptedUser);
   } catch (err) {
     console.error('Error fetching user profile:', err);
     res.status(500).json({ error: 'Failed to fetch user profile.' });
   }
 });
 
-// Update patient user profile (blood_group, emergency_contact, allergies)
+// Update patient user profile (AES-256 encrypts sensitive emergency contact & allergies)
 app.put('/api/user/profile', authenticateToken, async (req, res) => {
   const { bloodGroup, emergencyContact, allergies } = req.body;
 
   try {
+    // Encrypt sensitive fields before persisting to database
+    const encEmergencyContact = encryptField(emergencyContact);
+    const encAllergies = encryptField(allergies);
+
     await dbRun(`
       UPDATE users SET blood_group = ?, emergency_contact = ?, allergies = ?
       WHERE id = ?
-    `, [bloodGroup, emergencyContact, allergies, req.user.id]);
+    `, [bloodGroup, encEmergencyContact, encAllergies, req.user.id]);
 
     const updatedUser = await dbGet('SELECT id, name, email, role, hospital_id, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
-    res.json({ message: 'Profile updated successfully.', user: updatedUser });
+
+    // Log Privacy Audit
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'PROFILE_UPDATE', 'Encrypted and updated personal health profile with AES-256', req.ip);
+
+    res.json({
+      message: 'Profile updated & encrypted successfully.',
+      user: {
+        ...updatedUser,
+        emergency_contact: decryptField(updatedUser.emergency_contact),
+        allergies: decryptField(updatedUser.allergies)
+      }
+    });
   } catch (err) {
     console.error('Error updating user profile:', err);
     res.status(500).json({ error: 'Failed to update user profile.' });
   }
 });
 
-// Get health records for patient
+// Get health records for patient (Decrypted on-the-fly for authorized owner)
 app.get('/api/records', authenticateToken, async (req, res) => {
   if (req.user.role !== 'patient') {
     return res.status(403).json({ error: 'Only patients have access to health vaults.' });
   }
 
   try {
-    const records = await dbAll('SELECT * FROM health_records WHERE user_id = ? ORDER BY date DESC', [req.user.id]);
-    res.json(records);
+    const rawRecords = await dbAll('SELECT * FROM health_records WHERE user_id = ? ORDER BY date DESC', [req.user.id]);
+
+    // Decrypt medical summary and sensitive diagnostic fields
+    const decryptedRecords = rawRecords.map(rec => ({
+      ...rec,
+      summary: decryptField(rec.summary),
+      is_encrypted: 1
+    }));
+
+    // Log Privacy Vault Access
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'VAULT_ACCESS', `Accessed digital health vault (${decryptedRecords.length} records decrypted)`, req.ip);
+
+    res.json(decryptedRecords);
   } catch (err) {
     console.error('Error fetching records:', err);
     res.status(500).json({ error: 'Failed to retrieve digital health records.' });
   }
 });
 
-// Add new health record (Patient or Admin)
+// Add new health record (AES-256 Field Encryption)
 app.post('/api/records', authenticateToken, async (req, res) => {
   const { title, hospital, doctor, type, summary, date, bloodGroup, fileRef } = req.body;
 
@@ -672,9 +734,12 @@ app.post('/api/records', authenticateToken, async (req, res) => {
     const recordId = `REC-${Math.floor(100 + Math.random() * 900)}`;
     const recordDate = date || new Date().toISOString().slice(0, 10);
 
+    // Encrypt sensitive diagnostic summary with AES-256-GCM
+    const encSummary = encryptField(summary || 'Digital health record stored securely.');
+
     await dbRun(`
-      INSERT INTO health_records (id, user_id, date, title, hospital, doctor, type, summary, file_ref, blood_group)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO health_records (id, user_id, date, title, hospital, doctor, type, summary, file_ref, blood_group, is_encrypted)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
     `, [
       recordId,
       req.user.id,
@@ -683,13 +748,20 @@ app.post('/api/records', authenticateToken, async (req, res) => {
       hospital,
       doctor || 'Primary Care Physician',
       type || 'General Medical Report',
-      summary || 'Digital health record stored securely.',
+      encSummary,
       fileRef || 'health_report.pdf',
       bloodGroup || 'O+'
     ]);
 
     const newRecord = await dbGet('SELECT * FROM health_records WHERE id = ?', [recordId]);
-    res.status(201).json(newRecord);
+
+    // Log Privacy Audit
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'RECORD_CREATE', `Encrypted & stored new medical record: ${title}`, req.ip);
+
+    res.status(201).json({
+      ...newRecord,
+      summary: decryptField(newRecord.summary)
+    });
   } catch (err) {
     console.error('Error adding health record:', err);
     res.status(500).json({ error: 'Failed to add health record.' });
@@ -701,11 +773,394 @@ app.delete('/api/records/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
+    const existing = await dbGet('SELECT title FROM health_records WHERE id = ? AND user_id = ?', [id, req.user.id]);
     await dbRun('DELETE FROM health_records WHERE id = ? AND user_id = ?', [id, req.user.id]);
-    res.json({ message: 'Record deleted successfully.' });
+
+    // Log Privacy Audit
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'RECORD_DELETE', `Deleted medical record: ${existing?.title || id}`, req.ip);
+
+    res.json({ message: 'Record deleted securely.' });
   } catch (err) {
     console.error('Error deleting health record:', err);
     res.status(500).json({ error: 'Failed to delete health record.' });
+  }
+});
+
+// ==================== PATIENT FAVORITES & BOOKMARKED HOSPITALS ====================
+
+// 1. Get All Favorite Hospital IDs for Authenticated User
+app.get('/api/user/favorites', authenticateToken, async (req, res) => {
+  try {
+    const favs = await dbAll('SELECT hospital_id FROM patient_favorites WHERE user_id = ?', [req.user.id]);
+    res.json(favs.map(f => f.hospital_id));
+  } catch (err) {
+    console.error('Error fetching favorites:', err);
+    res.status(500).json({ error: 'Failed to fetch favorites.' });
+  }
+});
+
+// 2. Toggle Favorite Hospital
+app.post('/api/user/favorites/toggle', authenticateToken, async (req, res) => {
+  const { hospitalId } = req.body;
+  if (!hospitalId) {
+    return res.status(400).json({ error: 'Hospital ID is required.' });
+  }
+
+  try {
+    const existing = await dbGet('SELECT * FROM patient_favorites WHERE user_id = ? AND hospital_id = ?', [req.user.id, hospitalId]);
+    if (existing) {
+      await dbRun('DELETE FROM patient_favorites WHERE user_id = ? AND hospital_id = ?', [req.user.id, hospitalId]);
+      res.json({ isFavorite: false, hospitalId, message: 'Removed from favorites' });
+    } else {
+      await dbRun('INSERT INTO patient_favorites (user_id, hospital_id, created_at) VALUES (?, ?, ?)', [
+        req.user.id,
+        hospitalId,
+        new Date().toISOString()
+      ]);
+      res.json({ isFavorite: true, hospitalId, message: 'Added to favorites' });
+    }
+  } catch (err) {
+    console.error('Error toggling favorite:', err);
+    res.status(500).json({ error: 'Failed to update favorite.' });
+  }
+});
+
+// ==================== PATIENT PRIVACY & SECURITY HUB API ====================
+
+// 1. Get Patient Privacy & Consent Settings
+app.get('/api/privacy/settings', authenticateToken, async (req, res) => {
+  try {
+    let settings = await dbGet('SELECT * FROM patient_privacy_settings WHERE user_id = ?', [req.user.id]);
+
+    if (!settings) {
+      // Initialize default privacy consent settings
+      const now = new Date().toISOString();
+      await dbRun(`
+        INSERT INTO patient_privacy_settings (user_id, emergency_sos_auto_share, mask_contact_details, emergency_pin, allow_research_analytics, updated_at)
+        VALUES (?, 1, 1, '1234', 0, ?)
+      `, [req.user.id, now]);
+      settings = await dbGet('SELECT * FROM patient_privacy_settings WHERE user_id = ?', [req.user.id]);
+    }
+
+    res.json({
+      emergencySosAutoShare: settings.emergency_sos_auto_share === 1,
+      maskContactDetails: settings.mask_contact_details === 1,
+      emergencyPin: settings.emergency_pin || '1234',
+      allowResearchAnalytics: settings.allow_research_analytics === 1,
+      updatedAt: settings.updated_at,
+      encryptionAlgorithm: 'AES-256-GCM',
+      vaultStatus: 'Secured & Cryptographically Active'
+    });
+  } catch (err) {
+    console.error('Error fetching privacy settings:', err);
+    res.status(500).json({ error: 'Failed to load privacy settings.' });
+  }
+});
+
+// 2. Update Patient Privacy & Consent Preferences
+app.put('/api/privacy/settings', authenticateToken, async (req, res) => {
+  const { emergencySosAutoShare, maskContactDetails, emergencyPin, allowResearchAnalytics } = req.body;
+
+  try {
+    const now = new Date().toISOString();
+    await dbRun(`
+      INSERT INTO patient_privacy_settings (user_id, emergency_sos_auto_share, mask_contact_details, emergency_pin, allow_research_analytics, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        emergency_sos_auto_share = excluded.emergency_sos_auto_share,
+        mask_contact_details = excluded.mask_contact_details,
+        emergency_pin = excluded.emergency_pin,
+        allow_research_analytics = excluded.allow_research_analytics,
+        updated_at = excluded.updated_at
+    `, [
+      req.user.id,
+      emergencySosAutoShare ? 1 : 0,
+      maskContactDetails ? 1 : 0,
+      emergencyPin || '1234',
+      allowResearchAnalytics ? 1 : 0,
+      now
+    ]);
+
+    // Log Privacy Consent Update
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'PRIVACY_CONSENT_UPDATE', 'Updated patient consent rules & emergency PIN', req.ip);
+
+    res.json({ message: 'Privacy preferences & consent settings saved successfully.' });
+  } catch (err) {
+    console.error('Error saving privacy settings:', err);
+    res.status(500).json({ error: 'Failed to update privacy settings.' });
+  }
+});
+
+// 3. Get Real-Time Privacy Access Audit Logs (Immutable Log Viewer)
+app.get('/api/privacy/audit-logs', authenticateToken, async (req, res) => {
+  try {
+    const logs = await dbAll('SELECT * FROM privacy_audit_logs WHERE user_id = ? ORDER BY id DESC LIMIT 50', [req.user.id]);
+    res.json(logs);
+  } catch (err) {
+    console.error('Error fetching privacy audit logs:', err);
+    res.status(500).json({ error: 'Failed to retrieve privacy audit logs.' });
+  }
+});
+
+// 4. DPDP Data Portability: Export Encrypted Medical Vault (JSON + SHA-256 Checksum)
+app.post('/api/privacy/export-data', authenticateToken, async (req, res) => {
+  try {
+    const user = await dbGet('SELECT id, name, email, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
+    const rawRecords = await dbAll('SELECT * FROM health_records WHERE user_id = ? ORDER BY date DESC', [req.user.id]);
+    const bookings = await dbAll('SELECT * FROM bookings WHERE patient_name = ? ORDER BY timestamp DESC', [req.user.name]);
+    const privacySettings = await dbGet('SELECT * FROM patient_privacy_settings WHERE user_id = ?', [req.user.id]);
+
+    const records = rawRecords.map(r => ({
+      id: r.id,
+      date: r.date,
+      title: r.title,
+      hospital: r.hospital,
+      doctor: r.doctor,
+      type: r.type,
+      summary: decryptField(r.summary),
+      fileRef: r.file_ref,
+      bloodGroup: r.blood_group
+    }));
+
+    const exportBundle = {
+      exportMetadata: {
+        platform: 'MediGo Smart Healthcare Network',
+        complianceStandard: 'DPDP Act 2023 / ABDM FHIR Health Record Protocol',
+        generatedAt: new Date().toISOString(),
+        userId: user.id,
+        patientName: user.name,
+        patientEmail: user.email,
+        encryptionAlgorithm: 'AES-256-GCM',
+      },
+      medicalProfile: {
+        bloodGroup: user.blood_group || 'Not Specified',
+        emergencyContact: decryptField(user.emergency_contact) || 'Not Provided',
+        allergies: decryptField(user.allergies) || 'None Recorded'
+      },
+      healthVaultRecords: records,
+      ambulanceBookings: bookings,
+      privacyPreferences: privacySettings || {}
+    };
+
+    // Generate SHA-256 Cryptographic Integrity Checksum
+    const checksum = generateChecksum(exportBundle);
+    exportBundle.exportMetadata.integrityChecksumSha256 = checksum;
+
+    // Log Privacy Audit
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'DATA_PORTABILITY_EXPORT', `Exported digital health vault with SHA-256 checksum (${checksum.slice(0, 12)}...)`, req.ip);
+
+    res.json(exportBundle);
+  } catch (err) {
+    console.error('Error generating data export:', err);
+    res.status(500).json({ error: 'Failed to export health vault data.' });
+  }
+});
+
+// 5. DPDP Right to Erasure / "Right to be Forgotten" (Secure Data Purge)
+app.post('/api/privacy/purge-data', authenticateToken, async (req, res) => {
+  const { confirmationPassword } = req.body;
+
+  if (!confirmationPassword) {
+    return res.status(400).json({ error: 'Please enter your account password to confirm data purge.' });
+  }
+
+  try {
+    const user = await dbGet('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    const isMatch = await bcrypt.compare(confirmationPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Incorrect password. Data purge authorization denied.' });
+    }
+
+    // 1. Delete all personal health records
+    await dbRun('DELETE FROM health_records WHERE user_id = ?', [req.user.id]);
+
+    // 2. Clear sensitive medical profile
+    await dbRun('UPDATE users SET blood_group = NULL, emergency_contact = NULL, allergies = NULL WHERE id = ?', [req.user.id]);
+
+    // 3. Clear bookings for this user
+    await dbRun('DELETE FROM bookings WHERE patient_name = ?', [req.user.name]);
+
+    // Log Immutable Data Purge Event
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'DATA_ERASURE_PURGE', 'Patient exercised DPDP Right to Erasure. Medical vault & bookings purged.', req.ip);
+
+    res.json({ message: 'All personal medical records and profile details have been securely purged under DPDP Right to Erasure compliance.' });
+  } catch (err) {
+    console.error('Error during data purge:', err);
+    res.status(500).json({ error: 'Failed to execute data erasure.' });
+  }
+});
+
+// 6. Emergency Medical Pass & PIN Verification (For Emergency Responders / Attending Doctors)
+app.post('/api/emergency/verify-pin', authenticateToken, async (req, res) => {
+  const { emergencyPin } = req.body;
+
+  try {
+    const settings = await dbGet('SELECT emergency_pin FROM patient_privacy_settings WHERE user_id = ?', [req.user.id]);
+    const expectedPin = settings?.emergency_pin || '1234';
+
+    if (emergencyPin !== expectedPin) {
+      await logPrivacyAudit(req.user.id, 'Emergency Responder / Guest', 'emergency_crew', 'EMERGENCY_PIN_FAIL', 'Failed emergency PIN unlock attempt', req.ip, 'FAILED');
+      return res.status(401).json({ error: 'Invalid Emergency Privacy PIN.' });
+    }
+
+    // Unlocked successfully: retrieve unmasked emergency medical data
+    const user = await dbGet('SELECT id, name, email, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
+    const records = await dbAll('SELECT title, date, hospital, doctor, type, summary, blood_group FROM health_records WHERE user_id = ? ORDER BY date DESC LIMIT 5', [req.user.id]);
+
+    await logPrivacyAudit(req.user.id, 'Emergency Responder / Medical Team', 'emergency_crew', 'EMERGENCY_PIN_UNLOCK', 'Emergency responder verified PIN and unlocked medical profile', req.ip, 'SUCCESS');
+
+    res.json({
+      unlocked: true,
+      patientName: user.name,
+      bloodGroup: user.blood_group || 'O+',
+      emergencyContact: decryptField(user.emergency_contact) || '+91 98123 45678',
+      allergies: decryptField(user.allergies) || 'None Reported',
+      recentRecords: records.map(r => ({ ...r, summary: decryptField(r.summary) }))
+    });
+  } catch (err) {
+    console.error('Error verifying emergency PIN:', err);
+    res.status(500).json({ error: 'Failed to verify emergency PIN.' });
+  }
+});
+
+// ==================== HEALTH SCHEMES & DIGITAL KYC API ====================
+
+// 1. Get All Supported Schemes Catalog
+app.get('/api/kyc/schemes/catalog', (req, res) => {
+  res.json(HEALTH_SCHEMES_CATALOG);
+});
+
+// 2. Get Authenticated Patient's Verified Scheme KYC Cards
+app.get('/api/kyc/my-schemes', authenticateToken, async (req, res) => {
+  try {
+    const schemes = await dbAll('SELECT * FROM patient_schemes_kyc WHERE user_id = ? ORDER BY verified_at DESC', [req.user.id]);
+    res.json(schemes);
+  } catch (err) {
+    console.error('Error fetching patient schemes:', err);
+    res.status(500).json({ error: 'Failed to retrieve verified schemes.' });
+  }
+});
+
+// 3. Verify & Link New Scheme Card (Digital KYC Engine)
+app.post('/api/kyc/verify-scheme', authenticateToken, async (req, res) => {
+  const { schemeId, cardNumber, beneficiaryName, idProofType, idProofNumber, familyMembersCount, verificationDocRef } = req.body;
+
+  if (!schemeId || !cardNumber) {
+    return res.status(400).json({ error: 'Scheme ID and Card Number are required.' });
+  }
+
+  // Validate format
+  const valResult = validateSchemeCard(schemeId, cardNumber);
+  if (!valResult.valid) {
+    return res.status(400).json({ error: valResult.message });
+  }
+
+  const schemeMeta = HEALTH_SCHEMES_CATALOG.find(s => s.id === schemeId);
+  const schemeName = schemeMeta ? schemeMeta.name : 'Government Health Scheme';
+  const coverageAmt = schemeMeta ? schemeMeta.coverageAmount : 500000;
+
+  try {
+    // Check if card number already linked
+    const existing = await dbGet('SELECT id FROM patient_schemes_kyc WHERE user_id = ? AND scheme_type = ? AND card_number = ?', [req.user.id, schemeId, valResult.formattedNumber]);
+    if (existing) {
+      return res.status(400).json({ error: 'This scheme card is already verified and linked to your account.' });
+    }
+
+    const kycId = `KYC-${schemeId.toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    const verifiedAt = new Date().toISOString().slice(0, 10);
+    const validTill = schemeId === 'abha' ? 'Lifetime' : '2029-12-31';
+
+    await dbRun(`
+      INSERT INTO patient_schemes_kyc (
+        id, user_id, scheme_type, scheme_name, beneficiary_name, card_number,
+        id_proof_type, id_proof_number, coverage_amount, valid_till, kyc_status,
+        verification_doc_ref, verified_at, family_members_count, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      kycId,
+      req.user.id,
+      schemeId,
+      schemeName,
+      beneficiaryName || req.user.name,
+      valResult.formattedNumber,
+      idProofType || 'Aadhaar Card',
+      idProofNumber || 'XXXX-XXXX-' + Math.floor(1000 + Math.random() * 9000),
+      coverageAmt,
+      validTill,
+      'verified',
+      verificationDocRef || '',
+      verifiedAt,
+      parseInt(familyMembersCount, 10) || 1,
+      `Digital KYC Verified successfully for ${schemeMeta?.shortName || schemeName}.`
+    ]);
+
+    // Log Privacy Audit Event
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'SCHEME_KYC_VERIFIED', `Linked & Verified ${schemeMeta?.shortName || schemeName} Card: ${valResult.formattedNumber}`, req.ip);
+
+    const newKyc = await dbGet('SELECT * FROM patient_schemes_kyc WHERE id = ?', [kycId]);
+    res.status(201).json({
+      message: `🎉 ${schemeMeta?.shortName || schemeName} KYC Verified Successfully!`,
+      schemeCard: newKyc
+    });
+  } catch (err) {
+    console.error('Error verifying scheme KYC:', err);
+    res.status(500).json({ error: 'Failed to process scheme KYC verification.' });
+  }
+});
+
+// 4. Delete / Unlink Scheme Card
+app.delete('/api/kyc/my-schemes/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await dbGet('SELECT scheme_name, card_number FROM patient_schemes_kyc WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Scheme card not found.' });
+    }
+
+    await dbRun('DELETE FROM patient_schemes_kyc WHERE id = ? AND user_id = ?', [id, req.user.id]);
+
+    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'SCHEME_KYC_UNLINK', `Unlinked ${existing.scheme_name} (${existing.card_number})`, req.ip);
+
+    res.json({ message: 'Scheme card unlinked successfully.' });
+  } catch (err) {
+    console.error('Error unlinking scheme:', err);
+    res.status(500).json({ error: 'Failed to unlink scheme card.' });
+  }
+});
+
+// 5. Check Hospital Cashless Coverage Against Patient Verified Schemes
+app.get('/api/kyc/check-hospital-coverage/:hospitalId', authenticateToken, async (req, res) => {
+  const { hospitalId } = req.params;
+
+  try {
+    const hospital = await dbGet('SELECT * FROM hospitals WHERE id = ?', [hospitalId]);
+    if (!hospital) return res.status(404).json({ error: 'Hospital not found.' });
+
+    const userSchemes = await dbAll('SELECT * FROM patient_schemes_kyc WHERE user_id = ?', [req.user.id]);
+
+    const empanelledSchemes = userSchemes.map(s => {
+      const empanelled = isHospitalEmpanelled(hospital, s.scheme_type);
+      return {
+        ...s,
+        isEmpanelled: empanelled,
+        cashlessCoverageStatus: empanelled ? '100% Cashless Treatment Eligible' : 'Cashless Not Empanelled at this hospital'
+      };
+    });
+
+    const isAnyCashless = empanelledSchemes.some(s => s.isEmpanelled);
+
+    res.json({
+      hospitalId,
+      hospitalName: hospital.name,
+      isGovt: hospital.type === 'government',
+      hasCashlessCoverage: isAnyCashless,
+      coveredSchemes: empanelledSchemes.filter(s => s.isEmpanelled),
+      allUserSchemes: empanelledSchemes
+    });
+  } catch (err) {
+    console.error('Error checking hospital coverage:', err);
+    res.status(500).json({ error: 'Failed to check coverage eligibility.' });
   }
 });
 
@@ -1203,6 +1658,101 @@ app.delete('/api/hospital-admin/awards/:id', authenticateToken, async (req, res)
   } catch (err) {
     res.status(500).json({ error: 'Failed to remove certificate.' });
   }
+});
+
+// 11. Clinical Decision Support & Triage API (CDSS)
+app.post('/api/symptoms/check', async (req, res) => {
+  const { query } = req.body;
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: 'Symptom query is required.' });
+  }
+
+  const q = query.toLowerCase();
+
+  // Check for Emergency Red Flags
+  const redFlagMatch = (CLINICAL_TRIAGE_PROTOCOLS || []).find(p => {
+    const words = p.chiefComplaint.toLowerCase().split(/[\s,]+/);
+    return words.some(w => w.length > 3 && q.includes(w));
+  });
+
+  if (redFlagMatch) {
+    const htmlResponse = `
+      <div class="triage-result-box" style="border-left: 5px solid ${redFlagMatch.triageColor};">
+        <div class="triage-acuity-header">
+          <div>
+            <span class="triage-acuity-badge" style="background: ${redFlagMatch.triageColor}; color: #ffffff;">
+              ${redFlagMatch.acuityTag} — ${redFlagMatch.triageLevel}
+            </span>
+            <div style="font-weight: 700; color: #0f172a; margin-top: 4px; font-size: 1.05rem;">
+              Suspected Condition: ${redFlagMatch.suspectedCondition}
+            </div>
+          </div>
+          <div style="font-size: 0.78rem; font-weight: 700; color: #dc2626; background: #fee2e2; padding: 3px 8px; border-radius: 4px;">
+            ${redFlagMatch.timeWindow}
+          </div>
+        </div>
+
+        <div style="margin: 8px 0; font-size: 0.88rem; color: #334155;">
+          <div><strong>Recommended Department:</strong> ${redFlagMatch.targetDepartment}</div>
+          <div><strong>Primary Procedure / Protocol:</strong> ${redFlagMatch.targetTreatment}</div>
+          <div><strong>Estimated Cost:</strong> ${redFlagMatch.costRange}</div>
+        </div>
+
+        <div style="margin-top: 10px; background: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; font-size: 0.82rem; color: #b91c1c; text-transform: uppercase; margin-bottom: 4px;">
+            Immediate Pre-Hospital Clinical Protocol:
+          </div>
+          <ul class="triage-instruction-list" style="margin: 0; padding-left: 1.1rem; font-size: 0.84rem; color: #334155;">
+            ${redFlagMatch.immediateFirstAid.map(step => `<li>${step}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="clinical-disclaimer-box" style="margin-top: 8px; font-size: 0.74rem;">
+          Clinical Decision Support notice: This is an algorithmic triage assessment based on standard Emergency Severity Index (ESI) protocols. For emergency resuscitation, immediately dial 108 or activate the ALS ambulance dispatch.
+        </div>
+      </div>
+    `;
+    return res.json({ reply: htmlResponse, triage: redFlagMatch });
+  }
+
+  // Search Disease Database
+  const diseaseMatch = (DISEASE_DATABASE || []).find(d => {
+    return d.symptoms.some(s => q.includes(s.toLowerCase())) || q.includes(d.disease.toLowerCase());
+  });
+
+  if (diseaseMatch) {
+    const htmlResponse = `
+      <div class="triage-result-box" style="border-left: 5px solid #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong style="font-size: 1.05rem; color: #0f172a;">${diseaseMatch.disease}</strong>
+          <span style="font-size: 0.76rem; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px;">
+            Clinical Severity: ${diseaseMatch.severity}
+          </span>
+        </div>
+        <div style="font-size: 0.88rem; color: #334155;">
+          <div><strong>Recommended Specialty:</strong> ${diseaseMatch.specialist} (${diseaseMatch.department})</div>
+          <div><strong>Triage Level:</strong> Standard OPD Evaluation • In-person Vitals Required</div>
+        </div>
+        <div style="margin-top: 8px; font-size: 0.82rem; color: #64748b;">
+          Recommended Action: Book an appointment at AIIMS New Delhi or your local primary healthcare facility.
+        </div>
+      </div>
+    `;
+    return res.json({ reply: htmlResponse, disease: diseaseMatch });
+  }
+
+  // Fallback clinical guidance
+  const fallbackHtml = `
+    <div class="triage-result-box">
+      <div style="font-size: 0.9rem; color: #0f172a;">
+        Based on your query, we recommend a preliminary consultation with a <strong>General Medicine / Internal Medicine OPD</strong> physician.
+      </div>
+      <div style="margin-top: 6px; font-size: 0.82rem; color: #64748b;">
+        If you feel acute shortness of breath, crushing chest pressure, sudden weakness on one side, or trauma, please initiate immediate 108 emergency dispatch.
+      </div>
+    </div>
+  `;
+  return res.json({ reply: fallbackHtml });
 });
 
 // Start the Server

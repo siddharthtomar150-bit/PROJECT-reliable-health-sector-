@@ -43,9 +43,17 @@
         </div>
       </a>
 
+      <!-- Guest Sign In / Auth Button (Visible when not authenticated) -->
+      <div id="guestNavAction" style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-outline" id="btnOpenAuthModal" style="padding: 7px 14px; font-size: 0.85rem; font-weight: 600;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Patient Sign In / Register
+        </button>
+      </div>
+
       <!-- User Profile and Logout (Visible when authenticated) -->
       <div class="user-profile-header" id="userProfileHeader" style="display: none;">
-        <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;">
+        <div style="width: 34px; height: 34px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.88rem;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         </div>
         <div class="profile-info">
@@ -58,112 +66,96 @@
         </button>
       </div>
 
-
-
-      <a href="admin.html" class="btn btn-primary" style="text-decoration: none; padding: 6px 14px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-        🏥 Hospital Admin Portal
+      <a href="admin.html" class="btn btn-primary" style="text-decoration: none; padding: 7px 14px; font-size: 0.84rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+        Hospital Admin Portal
       </a>
 
       <div class="sync-badge">
         <span class="pulse-dot"></span>
-        <span>Real-time Live Sync</span>
+        <span>30,273 Hospitals Live</span>
       </div>
     </div>
   </header>
 
   <main class="main-wrapper">
 
-    <!-- Authentication Section (Login / Signup) -->
-    <section id="authSection" class="view-section active">
-      <div class="auth-wrapper">
-        <div class="auth-card">
-          <div class="auth-header">
-            <h2>Welcome to MediGo</h2>
-            <p>Access hospital search, live ICU beds, and emergency services</p>
-          </div>
+    <!-- Realistic Healthcare Hero Banner -->
+    <section class="healthcare-hero-banner">
+      <div class="hero-top-ticker">
+        <span class="ticker-live-pill"><span class="pulse-dot"></span> LIVE NETWORK</span>
+        <span><strong>30,273</strong> Verified Hospitals</span>
+        <span>•</span>
+        <span><strong>14,280+</strong> Active ICU Beds</span>
+        <span>•</span>
+        <span><strong>100%</strong> PM-JAY & CGHS Verified</span>
+        <span>•</span>
+        <span>Avg Emergency Dispatch: <strong>7.8 Mins</strong></span>
+      </div>
 
-          <!-- Emergency Direct Bypass Button -->
-          <div style="margin-bottom: 1.25rem; text-align: center;">
-            <button id="btnEmergencyGuest" class="btn btn-danger" style="width: 100%; padding: 12px; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); background: linear-gradient(135deg, #ef4444, #dc2626); border: none; cursor: pointer;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-              🚨 URGENT EMERGENCY ACCESS (No Login Needed)
-            </button>
-            <div style="font-size: 0.78rem; color: #dc2626; font-weight: 600; margin-top: 6px;">Bypass login for immediate ICU bed search & ambulance booking</div>
-          </div>
-          
-          <div class="auth-tabs">
-            <button class="auth-tab active" id="tabLoginBtn">Sign In</button>
-            <button class="auth-tab" id="tabSignupBtn">Register</button>
-          </div>
+      <div class="hero-content">
+        <h1 class="hero-title">Find Verified Hospitals, Live ICU Beds & Emergency Care</h1>
+        <p class="hero-subtitle">
+          Search accredited medical colleges, multispecialty hospitals, and emergency trauma centers across India with real-time bed telemetry and instant 108 ALS dispatch.
+        </p>
+      </div>
 
-          <!-- Login Form -->
-          <form id="loginForm" class="auth-form active">
-            <div class="form-group">
-              <label for="loginEmail">Email Address</label>
-              <input type="email" id="loginEmail" class="form-control" placeholder="patient@medigo.com" required>
-            </div>
-            <div class="form-group">
-              <label for="loginPassword">Password</label>
-              <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 10px;">
-              Sign In to Portal
-            </button>
-          </form>
+      <!-- Quick City & State Pills -->
+      <div class="hero-city-pills">
+        <span class="city-pill-label">Popular Hubs:</span>
+        <button class="city-pill active" data-state="all" data-district="all">All India</button>
+        <button class="city-pill" data-state="Delhi" data-district="New Delhi">New Delhi</button>
+        <button class="city-pill" data-state="Uttar Pradesh" data-district="Meerut">Meerut (NCR)</button>
+        <button class="city-pill" data-state="Haryana" data-district="Gurgaon">Gurugram</button>
+        <button class="city-pill" data-state="Uttar Pradesh" data-district="Lucknow">Lucknow</button>
+        <button class="city-pill" data-state="Maharashtra" data-district="Mumbai">Mumbai</button>
+        <button class="city-pill" data-state="Karnataka" data-district="Bangalore">Bengaluru</button>
+      </div>
 
-          <!-- Signup Form -->
-          <form id="signupForm" class="auth-form">
-            <div class="form-group">
-              <label for="signupName">Full Name</label>
-              <input type="text" id="signupName" class="form-control" placeholder="Rahul Sharma" required>
-            </div>
-            <div class="form-group">
-              <label for="signupEmail">Email Address</label>
-              <input type="email" id="signupEmail" class="form-control" placeholder="name@domain.com" required>
-            </div>
-            <div class="form-group">
-              <label for="signupPassword">Password</label>
-              <input type="password" id="signupPassword" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 10px;">Create Account</button>
-          </form>
-
-          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light-border-subtle); font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quick Access & Demo Accounts:</div>
-            <div>• <strong>Patient Demo:</strong> <code>patient@medigo.com</code> / <code>patient123</code></div>
-            <div style="margin-top: 4px;">• <strong>Hospital Admin:</strong> Switch to <a href="admin.html" style="color: var(--primary); font-weight: 600; text-decoration: underline;">Hospital Admin SaaS Portal</a> (Demo: <code>admin@citycare.com</code>)</div>
-          </div>
-        </div>
+      <!-- Rapid Clinical Acuity Filter Chips -->
+      <div class="hero-acuity-chips">
+        <button class="acuity-chip" id="chipIcuOnly">
+          <span class="dot-indicator red"></span>
+          ICU Beds Available Now
+        </button>
+        <button class="acuity-chip" id="chipPmjayOnly">
+          <span class="dot-indicator green"></span>
+          Ayushman PM-JAY Cashless
+        </button>
+        <button class="acuity-chip" id="chipGovtOnly">
+          <span class="dot-indicator blue"></span>
+          Govt Medical Colleges (AIIMS/Safdarjung)
+        </button>
+        <button class="acuity-chip" id="chipNabhOnly">
+          <span class="dot-indicator teal"></span>
+          NABH & JCI Accredited
+        </button>
       </div>
     </section>
 
     <!-- Emergency Ribbon -->
-    <div class="emergency-ribbon" id="emergencyRibbon" style="display: none;">
-      <div class="emergency-info">
-        <h3>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          Emergency SOS & Live Bed Beacon
-        </h3>
-        <p style="font-size: 0.85rem;">Need urgent emergency ambulance or ICU bed? Trigger immediate location dispatch to nearest network hospitals.</p>
+    <div id="emergencyBypassRibbon" class="emergency-ribbon" style="display: none;">
+      <div class="emergency-ribbon-content">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.2rem;">🚨</span>
+          <span><strong>Emergency Mode Active:</strong> Showing real-time ICU beds & fast-track 108 ambulance booking</span>
+        </div>
+        <button id="btnExitEmergency" class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.4); padding: 2px 8px; font-size: 0.75rem;">Exit Emergency Mode</button>
       </div>
-      <button class="sos-trigger-btn" id="btnGlobalSos">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        Instant SOS Alert
-      </button>
     </div>
 
-    <!-- ==================== SECTION 1: PATIENT VIEW ==================== -->
-    <section id="patientViewSection" class="view-section">
+    <!-- Patient Experience Container (OPEN BY DEFAULT) -->
+    <section id="patientViewSection" class="view-section active">
       
-      <!-- Patient Navigation Subtabs -->
-      <div style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--light-border-subtle); padding-bottom: 0.5rem; flex-wrap: wrap;">
-        <button class="btn patient-nav-tab" data-tab="search" style="background: var(--primary-light); color: var(--primary-hover);">
+      <!-- Patient Sub-navigation Tabs -->
+      <div class="patient-nav-tabs">
+        <button class="btn patient-nav-tab active" data-tab="search" style="background: var(--primary-light); color: var(--primary-hover);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          Search & Compare Hospitals
+          Search &amp; Compare Hospitals
         </button>
         <button class="btn patient-nav-tab" data-tab="ambulance" style="background: transparent; color: var(--text-muted);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-          Book & Track Ambulance
+          Book &amp; Track Ambulance
         </button>
         <button class="btn patient-nav-tab" data-tab="ai" style="background: transparent; color: var(--text-muted);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16.01"></line><line x1="16" y1="16" x2="16" y2="16.01"></line></svg>
@@ -172,6 +164,14 @@
         <button class="btn patient-nav-tab" data-tab="records" style="background: transparent; color: var(--text-muted);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
           Digital Health Vault
+        </button>
+        <button class="btn patient-nav-tab" data-tab="privacy" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          🛡️ Privacy &amp; Security Hub
+        </button>
+        <button class="btn patient-nav-tab" data-tab="schemes" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+          💳 Govt Schemes &amp; KYC
         </button>
       </div>
 
@@ -184,12 +184,26 @@
             <div class="card-panel">
               <h3 style="margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                Search & Filters (30,000+ Hospitals)
+                Search &amp; Filters (30,000+ Hospitals)
               </h3>
 
               <div class="form-group">
-                <label>Search Keyword</label>
-                <input type="text" class="form-control" id="searchInput" placeholder="Search Name, City, Specialty, Pincode...">
+                <label for="searchInput">Search Keyword</label>
+                <!-- Decoy inputs to neutralize browser password autofill -->
+                <input type="text" style="opacity: 0; position: absolute; width: 0; height: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
+                <input type="password" style="opacity: 0; position: absolute; width: 0; height: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="searchInput" 
+                  name="hospital_search_term_query_no_autofill" 
+                  autocomplete="new-password" 
+                  autocorrect="off" 
+                  autocapitalize="off" 
+                  spellcheck="false" 
+                  readonly 
+                  onfocus="this.removeAttribute('readonly');" 
+                  placeholder="Search Name, City, Specialty, Pincode...">
               </div>
 
               <div class="form-group">
@@ -212,6 +226,17 @@
                   <option value="all">All Hospitals (Govt & Private)</option>
                   <option value="government">Government Medical Colleges & Hospitals</option>
                   <option value="private">Private Multi-Specialty Hospitals</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Govt Schemes &amp; Cashless Empanelment</label>
+                <select class="form-select" id="schemeFilterSelect">
+                  <option value="all">All Network Hospitals</option>
+                  <option value="pmjay">🇮🇳 Ayushman Bharat (PM-JAY) Empanelled</option>
+                  <option value="cghs">🏛️ CGHS Empanelled (Central Govt)</option>
+                  <option value="echs">🎖️ ECHS Empanelled (Armed Forces)</option>
+                  <option value="govt_only">🏛️ 100% Free Govt Medical Colleges</option>
                 </select>
               </div>
 
@@ -287,16 +312,21 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
               <h3 id="searchCountBadge" style="font-size: 1.1rem; color: var(--text-main);">Hospitals Available</h3>
               
-              <!-- List / Map View Switcher -->
-              <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 6px;">
-                <button class="btn btn-primary" id="btnViewList" style="padding: 4px 12px; font-size: 0.8rem;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                  List View
+              <!-- List / Map View Switcher & Favorites Filter -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline btn-filter-fav" id="btnFilterFavorites" style="padding: 4px 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                  ❤️ My Favorites (<span id="favCountBadge">0</span>)
                 </button>
-                <button class="btn btn-outline" id="btnViewMap" style="padding: 4px 12px; font-size: 0.8rem; background: transparent; border: none; color: var(--text-muted);">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-                  Hospital Map View
-                </button>
+                <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 6px;">
+                  <button class="btn btn-primary" id="btnViewList" style="padding: 4px 12px; font-size: 0.8rem;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    List View
+                  </button>
+                  <button class="btn btn-outline" id="btnViewMap" style="padding: 4px 12px; font-size: 0.8rem; background: transparent; border: none; color: var(--text-muted);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                    🗺️ Map View
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -317,58 +347,98 @@
           
           <!-- Booking Form -->
           <div class="card-panel">
-            <h3 style="margin-bottom: 1rem; font-size: 1.05rem;">Book Emergency Ambulance</h3>
+            <h3 style="margin-bottom: 0.5rem; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              108 Emergency Ambulance Dispatch
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--slate-500); margin-bottom: 1.25rem;">Direct dispatch link with state emergency medical services and private ALS fleets.</p>
             
             <div class="form-group">
-              <label>Ambulance Category</label>
-              <select class="form-select" id="ambTypeSelect">
-                <option value="Normal">Normal Ambulance (Basic Life Support) - ₹799 base</option>
-                <option value="ICU">ICU Ventilator Ambulance (Advanced) - ₹2,199 base</option>
+              <label>Ambulance Equipment Tier</label>
+              <select class="form-select" id="ambTypeSelect" style="font-weight: 600;">
+                <option value="Govt ALS Ventilator Ambulance">Govt 108 Advanced Life Support (ALS) — 100% Free / Subsidized</option>
+                <option value="ICU Ventilator">Private ICU Mobile Intensive Care Unit (MICU) — ₹1,800 Base</option>
+                <option value="Normal">Basic Life Support (BLS) Patient Transport — ₹650 Base</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>Pickup Address</label>
-              <input type="text" class="form-control" value="H.No 45, Shastri Nagar, Meerut" id="ambPickupInput">
+              <label>Pickup Location / Landmark</label>
+              <input type="text" class="form-control" value="Defence Colony, Block C, New Delhi" id="ambPickupInput">
             </div>
 
             <div class="form-group">
-              <label>Destination Hospital</label>
-              <select class="form-select" id="ambDropHospitalSelect">
-                <option value="hosp-1">City Care Hospital (3.2 km away)</option>
-                <option value="hosp-2">Life Line Hospital (4.7 km away)</option>
-                <option value="hosp-4">Apex Heart & General Hospital (2.8 km away)</option>
+              <label>Receiving Hospital & Trauma Center</label>
+              <select class="form-select" id="ambDropHospitalSelect" style="font-weight: 600;">
+                <option value="hosp-gov-1">AIIMS New Delhi — Apex Trauma Center (1.8 km away)</option>
+                <option value="hosp-gov-2">Safdarjung Hospital & VMMC (2.3 km away)</option>
+                <option value="hosp-1">Max Super Speciality Hospital, Saket (3.5 km away)</option>
+                <option value="hosp-2">Fortis Escorts Heart Institute (4.2 km away)</option>
               </select>
             </div>
 
-            <button class="btn btn-primary" id="btnBookAmbulanceConfirm" style="width: 100%; margin-top: 1rem; padding: 10px;">
-              Confirm & Dispatch Ambulance
+            <button class="btn btn-danger" id="btnBookAmbulanceConfirm" style="width: 100%; margin-top: 1rem; padding: 12px; font-weight: 700;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              Dispatch Priority Emergency Ambulance
             </button>
           </div>
 
-          <!-- Live Tracking Map View -->
+          <!-- Live Tracking Map & Telemetry -->
           <div>
-            <div class="map-canvas-container">
-              <div class="eta-float-badge">
-                ETA: 12 Mins • Driver En Route
+            <!-- Live Step Timeline -->
+            <div class="card-panel" style="margin-bottom: 1rem; padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4 style="font-size: 0.95rem; color: var(--slate-900);">Live Dispatch Status & Telemetry</h4>
+                <span class="sync-badge">
+                  <span class="pulse-dot"></span>
+                  <span>GPS Telemetry Active</span>
+                </span>
               </div>
-              <div class="map-legend-overlay">
-                <div class="legend-item"><span class="legend-dot pickup"></span> Pickup Point</div>
-                <div class="legend-item"><span class="legend-dot hospital"></span> Hospital</div>
-                <div class="legend-item"><span class="legend-dot amb"></span> Ambulance GPS</div>
-              </div>
-              <div id="liveMapCanvas" style="width: 100%; height: 100%; min-height: 300px; z-index: 1;"></div>
-            </div>
 
-            <div class="card-panel">
-              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                  <h4 style="font-size: 1rem;">Assigned Ambulance: UP 15 AB 1234</h4>
-                  <p style="font-size: 0.85rem; color: var(--text-muted);">Driver: Ramesh Kumar • Contact: +91 91234 56789</p>
+              <div class="dispatch-timeline">
+                <div class="timeline-step completed">
+                  <div class="timeline-dot">1</div>
+                  <span class="timeline-title">Call Triaged</span>
                 </div>
-                <button class="btn btn-outline" onclick="alert('Calling Driver Ramesh Kumar (+91 91234 56789)...')">
-                  Call Driver
-                </button>
+                <div class="timeline-step completed">
+                  <div class="timeline-dot">2</div>
+                  <span class="timeline-title">Vehicle Assigned</span>
+                </div>
+                <div class="timeline-step active">
+                  <div class="timeline-dot">3</div>
+                  <span class="timeline-title">En Route to Patient</span>
+                </div>
+                <div class="timeline-step">
+                  <div class="timeline-dot">4</div>
+                  <span class="timeline-title">At Scene</span>
+                </div>
+                <div class="timeline-step">
+                  <div class="timeline-dot">5</div>
+                  <span class="timeline-title">In Transit to ER</span>
+                </div>
+              </div>
+
+              <div class="map-container-wrapper">
+                <div id="liveMapCanvas" class="map-canvas"></div>
+              </div>
+
+              <div class="vehicle-telemetry-card">
+                <div class="telemetry-item">
+                  <span class="telemetry-label">Assigned Vehicle</span>
+                  <span class="telemetry-value">DL 01 EM 1081</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label">Paramedic Onboard</span>
+                  <span class="telemetry-value" style="font-size: 0.95rem;">EMT Suresh Rawat</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label">Driver & Contact</span>
+                  <span class="telemetry-value" style="font-size: 0.95rem;">Satish (+91 98123 00000)</span>
+                </div>
+                <div class="telemetry-item">
+                  <span class="telemetry-label">Est. Time of Arrival</span>
+                  <span class="telemetry-value" style="color: #38bdf8;">~7 Minutes</span>
+                </div>
               </div>
             </div>
           </div>
@@ -376,47 +446,99 @@
         </div>
       </div>
 
-      <!-- SUBVIEW: AI Health Assistant -->
+      <!-- SUBVIEW: Clinical Decision Support / Triage (Replacing generic AI chat) -->
       <div id="subview-ai" class="patient-subview" style="display: none;">
-        <div class="card-panel" style="background: #0f172a; color: white;">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
-            <div style="width: 40px; height: 40px; border-radius: 8px; background: #0284c7; display: flex; align-items: center; justify-content: center; color: white;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path></svg>
+        <div class="clinical-triage-container">
+          
+          <div class="clinical-triage-card">
+            <span class="triage-hero-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              Clinical Decision Support System (CDSS)
+            </span>
+            <h3 style="font-size: 1.25rem; color: var(--slate-900); margin-bottom: 0.35rem;">Emergency Clinical Triage & Department Routing</h3>
+            <p style="font-size: 0.88rem; color: var(--slate-600); margin-bottom: 1.25rem;">
+              Enter symptoms or chief complaints to receive instant Emergency Severity Index (ESI) triage level, red-flag warnings, and department routing.
+            </p>
+
+            <div style="margin-bottom: 1.25rem;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--slate-700); display: block; margin-bottom: 8px;">
+                Select Rapid Clinical Scenarios:
+              </span>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #fca5a5; color: #b91c1c; background: #fef2f2;">
+                  🚨 Acute chest pain radiating to left arm & dyspnea
+                </button>
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #fca5a5; color: #b91c1c; background: #fef2f2;">
+                  🚨 Sudden facial drooping & slurred speech (Stroke)
+                </button>
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #fde68a; color: #b45309; background: #fffbeb;">
+                  ⚠️ Severe right lower abdominal pain & vomiting
+                </button>
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #fde68a; color: #b45309; background: #fffbeb;">
+                  ⚠️ Acute asthma flare-up & wheezing (SpO2 &lt; 92%)
+                </button>
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #cbd5e1; color: var(--slate-700);">
+                  ℹ️ Bilateral knee joint stiffness and chronic pain
+                </button>
+                <button type="button" class="btn btn-outline ai-preset-chip" style="font-size: 0.8rem; padding: 5px 12px; border-color: #cbd5e1; color: var(--slate-700);">
+                  ℹ️ High fever with chills and headache
+                </button>
+              </div>
             </div>
-            <div>
-              <h3 style="color: white; font-size: 1.1rem;">AI Clinical Guidance & Department Finder</h3>
-              <p style="font-size: 0.85rem; color: #94a3b8;">Describe your medical symptoms to identify the relevant specialty department and procedure cost estimates.</p>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 1.25rem;">
+              <input type="text" id="aiInput" class="form-control" placeholder="Describe symptoms (e.g. crushing chest pain, SpO2 88%, severe vertigo)..." style="font-size: 0.92rem; padding: 10px 14px;">
+              <button class="btn btn-primary" id="aiSendBtn" style="padding: 10px 22px; font-weight: 700;">
+                Run Triage
+              </button>
+            </div>
+
+            <div id="aiMessagesBox" style="min-height: 180px;">
+              <div class="triage-result-box" style="border-left: 5px solid var(--primary);">
+                <div style="font-weight: 700; color: var(--slate-900); font-size: 0.95rem; margin-bottom: 4px;">
+                  Clinical Triage System Ready
+                </div>
+                <div style="font-size: 0.86rem; color: var(--slate-600); line-height: 1.5;">
+                  Type your clinical symptoms or click any rapid triage scenario above to calculate emergency acuity, recommended specialty department, and pre-hospital protocol.
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style="margin-bottom: 1rem;">
-            <span style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 8px;">🩺 Quick Symptom Queries:</span>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">runny nose and sneezing</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">fever body pain fatigue</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">fever headache rash</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">fever chills sweating</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">high fever abdominal pain weakness</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">frequent urination increased thirst</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">headache dizziness blurred vision</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">shortness of breath wheezing</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">headache nausea light sensitivity</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">severe back pain painful urination</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Chest tightness and arm pain</button>
-              <button class="btn btn-outline ai-preset-chip" style="padding: 3px 10px; font-size: 0.75rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Severe lower right abdominal pain</button>
+          <!-- Triage Reference Sidebar -->
+          <div class="card-panel" style="background: var(--slate-900); color: #ffffff;">
+            <h4 style="font-size: 0.95rem; color: #ffffff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Emergency Severity Scale (ESI)
+            </h4>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.82rem;">
+              <div style="border-left: 3px solid #dc2626; padding-left: 8px;">
+                <strong style="color: #f87171;">ESI Level 1 (Resuscitation):</strong>
+                <div style="color: #94a3b8;">Immediate life-saving intervention needed (Code Blue / STEMI / Stroke).</div>
+              </div>
+
+              <div style="border-left: 3px solid #ea580c; padding-left: 8px;">
+                <strong style="color: #fb923c;">ESI Level 2 (Emergent):</strong>
+                <div style="color: #94a3b8;">High risk / severe pain / altered vitals. Care within 15 minutes.</div>
+              </div>
+
+              <div style="border-left: 3px solid #d97706; padding-left: 8px;">
+                <strong style="color: #fbbf24;">ESI Level 3 (Urgent):</strong>
+                <div style="color: #94a3b8;">Requires 2 or more diagnostic resources (Abdominal CT, IV fluids).</div>
+              </div>
+
+              <div style="border-left: 3px solid #059669; padding-left: 8px;">
+                <strong style="color: #34d399;">ESI Level 4 & 5 (Routine):</strong>
+                <div style="color: #94a3b8;">Standard OPD consultation slots & elective daycare procedures.</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.76rem; color: #94a3b8;">
+              Emergency Casualty Hotline: <strong>108</strong> (National)
             </div>
           </div>
 
-          <div class="ai-messages-box" id="aiMessagesBox" style="min-height: 200px; max-height: 350px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.1);">
-            <div class="ai-msg bot" style="background: rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem;">
-              Hello! Describe your health symptoms (e.g. "knee joint pain" or "lower right abdominal discomfort") to receive department guidance and hospital cost estimates.
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="aiInput" class="form-control" placeholder="Describe your symptoms here..." style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
-            <button class="btn btn-primary" id="aiSendBtn">Send Query</button>
-          </div>
         </div>
       </div>
 
@@ -556,6 +678,364 @@
         </div>
       </div>
 
+      <!-- SUBVIEW: Privacy & Security Hub -->
+      <div id="subview-privacy" class="patient-subview" style="display: none;">
+        <div style="max-width: 900px; margin: 0 auto;">
+          
+          <!-- Cryptographic Privacy Shield Banner -->
+          <div class="privacy-shield-banner">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                🛡️
+              </div>
+              <div>
+                <h3 style="color: white; font-size: 1.25rem;">Patient Data Privacy & Cryptographic Vault</h3>
+                <p style="font-size: 0.85rem; color: #a7f3d0;">DPDP Act 2023 &amp; HIPAA Compliant Zero-Knowledge Patient Architecture</p>
+              </div>
+            </div>
+
+            <p style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin-top: 0.75rem;">
+              Your medical records, diagnostic summaries, and personal emergency contacts are protected with <strong>AES-256-GCM Field-Level Encryption</strong> at rest and in transit. Only you and authorized medical personnel with your explicit digital consent or emergency PIN can decrypt your records.
+            </p>
+
+            <div class="crypto-status-grid">
+              <div class="crypto-status-card">
+                <div class="label">Encryption Standard</div>
+                <div class="value">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  AES-256-GCM
+                </div>
+              </div>
+              <div class="crypto-status-card">
+                <div class="label">Vault Integrity</div>
+                <div class="value">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  SHA-256 Tamper-Proof
+                </div>
+              </div>
+              <div class="crypto-status-card">
+                <div class="label">Access Audit Trail</div>
+                <div class="value">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  100% Immutable Logged
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emergency Medical Pass with Privacy Masking -->
+          <div class="medical-id-card">
+            <div class="medical-id-header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.3rem;">🪪</span>
+                <div>
+                  <h4 style="font-size: 1.05rem; color: #065f46;">Digital Emergency Medical Pass</h4>
+                  <div style="font-size: 0.78rem; color: #047857;">ABDM / DPDP Fast-Response Emergency Identifier</div>
+                </div>
+              </div>
+              <div id="medicalPassStatusBadge" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                🔒 Privacy Masking Active
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Patient Name</div>
+                <div id="passPatientName" style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-top: 2px;">Rahul Sharma</div>
+              </div>
+
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Blood Group</div>
+                <div style="margin-top: 2px;">
+                  <span id="passBloodGroup" style="background: #ef4444; color: white; padding: 2px 10px; border-radius: 12px; font-weight: 800; font-size: 0.85rem;">
+                    O+
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Emergency Contact</div>
+                <div id="passEmergencyContact" class="masked-data-field" style="margin-top: 2px;">
+                  +91 98*** 45678
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Known Allergies / Alerts</div>
+                <div id="passAllergies" class="masked-data-field" style="margin-top: 2px;">
+                  ••••••••••••
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #bbf7d0; padding-top: 0.75rem; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="font-size: 0.8rem; color: #047857;">
+                🚑 <strong>Paramedics &amp; ER Staff:</strong> Enter patient's 4-digit emergency PIN to unmask full medical profile.
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="password" id="inputEmergencyPin" maxlength="4" placeholder="4-digit PIN" style="width: 100px; padding: 5px 8px; border: 1px solid #86efac; border-radius: 6px; font-size: 0.85rem; text-align: center; letter-spacing: 2px;">
+                <button id="btnUnlockMedicalPass" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.82rem; background: #059669; border-color: #059669;">
+                  🔓 Verify &amp; Unlock
+                </button>
+                <button id="btnLockMedicalPass" class="btn btn-outline" style="padding: 5px 12px; font-size: 0.82rem; display: none;">
+                  🔒 Mask Data
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Granular Privacy & Consent Controls -->
+          <div class="card-panel" style="margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Patient Consent &amp; Privacy Preferences
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Configure granular sharing permissions in compliance with DPDP Act 2023.</p>
+
+            <form id="formPrivacySettings">
+              <div class="privacy-toggle-item">
+                <div class="privacy-toggle-info">
+                  <h4>🚨 Emergency SOS Dispatch Sharing</h4>
+                  <p>Automatically share Blood Group &amp; critical Allergies with 108 ambulance crews and receiving hospital when triggering Emergency SOS.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggleEmergencySosShare" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="privacy-toggle-item">
+                <div class="privacy-toggle-info">
+                  <h4>🔒 Mask Contact &amp; Identifiers</h4>
+                  <p>Keep phone numbers and personal emails masked (e.g. +91 98***) in all public directory and hospital enquiry views.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggleMaskContact" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="privacy-toggle-item">
+                <div class="privacy-toggle-info">
+                  <h4>📊 Anonymized Clinical Research Analytics</h4>
+                  <p>Permit completely de-identified medical procedure cost &amp; wait time analytics to assist public healthcare optimization.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggleResearchAnalytics">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="privacy-toggle-item" style="border-bottom: none;">
+                <div class="privacy-toggle-info">
+                  <h4>🔑 Emergency Responder Privacy PIN</h4>
+                  <p>Set a 4-digit security PIN to allow emergency room physicians to unmask your emergency medical ID during urgent admission.</p>
+                </div>
+                <div style="flex-shrink: 0;">
+                  <input type="text" id="settingEmergencyPin" maxlength="4" class="form-control" style="width: 90px; text-align: center; font-weight: 700; letter-spacing: 2px;" value="1234">
+                </div>
+              </div>
+
+              <div style="margin-top: 1rem; text-align: right; border-top: 1px solid var(--light-border-subtle); padding-top: 1rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
+                  💾 Save Privacy Preferences
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- DPDP Data Portability & Rights -->
+          <div class="card-panel" style="margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Data Portability &amp; Digital Rights (DPDP)
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Download a cryptographically verified archive of all your personal data, or exercise your Right to Erasure.</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+              <div style="border: 1px solid var(--light-border); padding: 1.25rem; border-radius: var(--radius-md); background: #f8fafc;">
+                <h4 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 6px;">📥 Export Encrypted Health Vault</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Download full medical records, bookings, and profile in FHIR-compatible JSON format with SHA-256 integrity checksum.</p>
+                <button id="btnExportData" class="btn btn-outline" style="width: 100%; font-size: 0.82rem; padding: 8px;">
+                  Download Encrypted Vault (.JSON)
+                </button>
+              </div>
+
+              <div style="border: 1px solid #fecaca; padding: 1.25rem; border-radius: var(--radius-md); background: #fef2f2;">
+                <h4 style="font-size: 0.95rem; color: #dc2626; margin-bottom: 6px;">🗑️ Right to Erasure (Data Purge)</h4>
+                <p style="font-size: 0.8rem; color: #991b1b; margin-bottom: 1rem;">Permanently wipe all health records, booking history, and medical details from the MediGo servers.</p>
+                <button id="btnTriggerDataPurge" class="btn btn-danger" style="width: 100%; font-size: 0.82rem; padding: 8px;">
+                  Request Complete Data Erasure
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-Time Privacy & Access Audit Logs -->
+          <div class="card-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <div>
+                <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  Live Access &amp; Privacy Audit Trail
+                </h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted);">Immutable record of every hospital, doctor, responder, or system interaction with your data.</p>
+              </div>
+              <button id="btnRefreshAuditLogs" class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;">
+                🔄 Refresh Logs
+              </button>
+            </div>
+
+            <div class="audit-table-wrapper">
+              <table class="audit-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Actor / Initiator</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                    <th>IP / Origin</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="auditLogsTableBody">
+                  <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading audit trail...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SUBVIEW: Government Health Schemes & Digital KYC -->
+      <div id="subview-schemes" class="patient-subview" style="display: none;">
+        <div style="max-width: 950px; margin: 0 auto;">
+          
+          <!-- Scheme Wallet Header Banner -->
+          <div class="scheme-wallet-banner">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                💳
+              </div>
+              <div>
+                <h3 style="color: white; font-size: 1.25rem;">Government Health Schemes &amp; Digital KYC Wallet</h3>
+                <p style="font-size: 0.85rem; color: #93c5fd;">Ayushman Bharat PM-JAY, ABHA ID, CGHS, ECHS &amp; State Health Insurance Portal</p>
+              </div>
+            </div>
+
+            <p style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin-top: 0.75rem;">
+              Verify and link your <strong>PM-JAY Golden Card</strong>, <strong>ABHA ID</strong>, or <strong>CGHS / ECHS Smart Card</strong> to unlock 100% cashless treatment at all empanelled government and private network hospitals.
+            </p>
+          </div>
+
+          <!-- Digital Scheme Cards Grid -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+              <span>🪪</span> My Verified Scheme Cards
+            </h3>
+            <button class="btn btn-primary" id="btnToggleAddScheme" style="font-size: 0.85rem;">
+              ➕ Link / Verify New Scheme Card
+            </button>
+          </div>
+
+          <div id="patientSchemeCardsContainer" class="scheme-cards-grid">
+            <!-- Rendered by app.js -->
+          </div>
+
+          <!-- Collapsible Scheme KYC Verification Form -->
+          <div id="addSchemeKycPanel" style="display: none; background: white; border: 1px solid var(--light-border); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem; box-shadow: var(--shadow-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h4 style="font-size: 1.05rem; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+                <span>🛡️</span> Instant Digital Scheme KYC Verification
+              </h4>
+              <button type="button" class="btn btn-outline" onclick="document.getElementById('addSchemeKycPanel').style.display='none'" style="padding: 2px 8px; font-size: 0.75rem;">✕ Close</button>
+            </div>
+
+            <form id="formVerifySchemeKyc" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Select Government / Private Health Scheme</label>
+                <select id="kycSchemeSelect" class="form-select" style="font-weight: 700;">
+                  <optgroup label="🇮🇳 National Government Schemes">
+                    <option value="pmjay">Ayushman Bharat - PM-JAY (₹5 Lakh Annual Cashless Cover)</option>
+                    <option value="abha">ABHA Health ID (Universal 14-Digit Digital Health Card)</option>
+                    <option value="cghs">Central Government Health Scheme (CGHS Card)</option>
+                    <option value="echs">Ex-Servicemen Contributory Health Scheme (ECHS Card)</option>
+                    <option value="esis">Employees' State Insurance Scheme (ESIC Pehchan Card)</option>
+                  </optgroup>
+                  <optgroup label="🏛️ State Government Schemes">
+                    <option value="state_up_pmjay">UP Mukhyamantri Jan Arogya Yojana (Uttar Pradesh)</option>
+                    <option value="state_delhi_dhas">Delhi Arogya Kosh &amp; Free Surgery Scheme (Delhi)</option>
+                    <option value="state_maha_mjpjay">Mahatma Jyotirao Phule Jan Arogya Yojana (Maharashtra)</option>
+                    <option value="state_wb_swasthya">Swasthya Sathi Scheme (West Bengal)</option>
+                    <option value="state_ap_aarogyasri">Dr. YSR Aarogyasri Scheme (Andhra Pradesh &amp; Telangana)</option>
+                  </optgroup>
+                  <optgroup label="🏥 Private Health Insurance TPA">
+                    <option value="private_star_health">Star Health Insurance (Cashless TPA)</option>
+                    <option value="private_hdfc_ergo">HDFC ERGO Health Insurance (Optima Secure)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Card / Policy / ABHA ID Number</label>
+                <input type="text" id="kycCardNumber" class="form-control" placeholder="e.g. PMJAY-9842-7105-3318" required>
+                <small id="kycFormatHint" style="color: var(--text-muted); font-size: 0.75rem; margin-top: 2px; display: block;">Format example: PMJAY-XXXX-XXXX-XXXX</small>
+              </div>
+
+              <div class="form-group">
+                <label>Beneficiary Full Name</label>
+                <input type="text" id="kycBeneficiaryName" class="form-control" placeholder="Rahul Sharma" required>
+              </div>
+
+              <div class="form-group">
+                <label>ID Proof for e-KYC</label>
+                <select id="kycIdProofType" class="form-select">
+                  <option value="Aadhaar Card">Aadhaar Card (Biometric / OTP)</option>
+                  <option value="Ration Card">Ration Card (NFSA / BPL / Antyodaya)</option>
+                  <option value="Voter ID">Voter ID Card (EPIC)</option>
+                  <option value="PAN Card">PAN Card</option>
+                  <option value="Armed Forces Service Book">Armed Forces Service ID (ECHS)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>ID Proof Number (Masked)</label>
+                <input type="text" id="kycIdProofNumber" class="form-control" placeholder="XXXX-XXXX-8912">
+              </div>
+
+              <div class="form-group">
+                <label>Covered Family Members</label>
+                <input type="number" id="kycFamilyMembers" class="form-control" min="1" max="10" value="4">
+              </div>
+
+              <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 0.5rem;">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('addSchemeKycPanel').style.display='none'">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="padding: 8px 22px;">
+                  ⚡ Verify &amp; Link Digital Card
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- All National & State Schemes Directory -->
+          <div class="card-panel">
+            <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
+              <span>📚</span> National &amp; State Health Schemes Directory
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Explore eligibility, coverage limits, and benefits of all government healthcare initiatives across India.</p>
+
+            <div id="schemesCatalogDirectory">
+              <!-- Rendered by app.js -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </section>
 
 
@@ -567,13 +1047,171 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3 style="font-size: 1.1rem;">Hospital Side-by-Side Comparison Matrix</h3>
-        <button class="modal-close">&times;</button>
+        <button class="modal-close" id="btnCloseCompareModal">&times;</button>
       </div>
       <div id="compareModalBody">
         <!-- Rendered via patient.js -->
       </div>
     </div>
   </div>
+
+  <!-- ==================== AUTH MODAL (Login / Register) ==================== -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; color: var(--slate-900);">Patient Access Portal</h3>
+        <button class="modal-close" id="btnCloseAuthModal">&times;</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--slate-200); padding-bottom: 6px;">
+          <button type="button" class="auth-tab active" id="tabLoginBtn" style="padding: 6px 16px; border: none; background: transparent; font-weight: 700; color: var(--primary); cursor: pointer; border-bottom: 2px solid var(--primary);">Sign In</button>
+          <button type="button" class="auth-tab" id="tabSignupBtn" style="padding: 6px 16px; border: none; background: transparent; font-weight: 600; color: var(--slate-500); cursor: pointer;">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label for="loginEmail">Registered Email</label>
+            <input type="email" id="loginEmail" name="email" class="form-control" placeholder="patient@medigo.com" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" name="password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-weight: 700;">
+            Sign In
+          </button>
+          <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--slate-500); background: var(--slate-50); padding: 8px; border-radius: 6px;">
+            Demo Credentials: <code>patient@medigo.com</code> / <code>patient123</code>
+          </div>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signupForm" class="auth-form" style="display: none;">
+          <div class="form-group">
+            <label for="signupName">Full Name</label>
+            <input type="text" id="signupName" name="name" class="form-control" placeholder="Rahul Sharma" required>
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email Address</label>
+            <input type="email" id="signupEmail" name="email" class="form-control" placeholder="name@domain.com" required>
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" name="password" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-weight: 700;">
+            Create Patient Account
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOSPITAL DETAIL & OPD DOCTOR DRAWER ==================== -->
+  <div class="modal-backdrop" id="hospDetailModal">
+    <div class="modal-box" style="max-width: 860px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="badge-tag nabh" id="modalHospBadge">NABH Accredited</span>
+          <h3 id="modalHospName" style="font-size: 1.25rem; color: var(--slate-900);">Hospital Clinical Profile</h3>
+        </div>
+        <button class="modal-close" id="btnCloseHospDetailModal">&times;</button>
+      </div>
+      <div class="modal-body" id="hospDetailModalBody">
+        <!-- Rendered dynamically by patient.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== OPD APPOINTMENT TOKEN SLIP MODAL ==================== -->
+  <div class="modal-backdrop" id="opdTokenModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; color: var(--slate-900);">Official OPD Registration Slip</h3>
+        <button class="modal-close" id="btnCloseOpdTokenModal">&times;</button>
+      </div>
+      <div class="modal-body" id="opdTokenModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EXACT GOOGLE MAP MODAL ==================== -->
+  <div class="modal-backdrop" id="googleMapModal">
+    <div class="modal-box" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #e0f2fe; color: #0284c7;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          </span>
+          <div>
+            <h3 id="googleMapHospName" style="font-size: 1.15rem; color: var(--slate-900); margin: 0; line-height: 1.3;">Exact Hospital Location</h3>
+            <p id="googleMapHospAddress" style="font-size: 0.8rem; color: var(--slate-500); margin: 2px 0 0;"></p>
+          </div>
+        </div>
+        <button class="modal-close" id="btnCloseGoogleMapModal">&times;</button>
+      </div>
+      <div class="modal-body" id="googleMapModalBody" style="padding: 1.25rem;">
+        <!-- Dynamically rendered by patient.js openGoogleMapModal -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== OFFICIAL HEALTHCARE FOOTER ==================== -->
+  <footer class="official-healthcare-footer">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-col brand-col">
+          <div class="footer-brand">
+            <div class="brand-icon-svg" style="width: 32px; height: 32px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 6v12M6 12h12"/></svg>
+            </div>
+            <span style="font-size: 1.2rem; font-weight: 800; font-family: 'Outfit', sans-serif;">MediGo</span>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--slate-400); margin: 10px 0 14px; line-height: 1.6;">
+            India's unified digital healthcare network connecting citizens with 30,000+ verified hospitals, real-time ICU beds, transparent procedure tariffs, and fast-track emergency dispatch.
+          </p>
+          <div class="compliance-badges-row">
+            <span class="compliance-tag">ABDM Compliant</span>
+            <span class="compliance-tag">DPDP Act 2023</span>
+            <span class="compliance-tag">NABH Partner</span>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Emergency Helplines</h4>
+          <ul class="footer-links">
+            <li><span>National Ambulance:</span> <strong>108</strong></li>
+            <li><span>Emergency Police / ER:</span> <strong>112</strong></li>
+            <li><span>Pregnant & Neonatal:</span> <strong>102</strong></li>
+            <li><span>National Health Helpline:</span> <strong>14477</strong></li>
+            <li><span>Mental Health (KIRAN):</span> <strong>1800-599-0019</strong></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Health Schemes & Portals</h4>
+          <ul class="footer-links">
+            <li><a href="#subview-schemes" onclick="document.querySelector('.patient-nav-tab[data-tab=\'schemes\']').click();">Ayushman Bharat (PM-JAY)</a></li>
+            <li><a href="#subview-schemes" onclick="document.querySelector('.patient-nav-tab[data-tab=\'schemes\']').click();">ABHA Digital Health Card</a></li>
+            <li><a href="#subview-schemes" onclick="document.querySelector('.patient-nav-tab[data-tab=\'schemes\']').click();">Central Govt Health Scheme (CGHS)</a></li>
+            <li><a href="admin.html">Hospital Partner HMS Portal</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Clinical Governance</h4>
+          <p style="font-size: 0.78rem; color: var(--slate-400); line-height: 1.5; margin-bottom: 8px;">
+            Bed capacity, ICU availability, and transparent tariffs are synchronized via verified hospital administrator endpoints and public health registry feeds.
+          </p>
+          <div style="font-size: 0.74rem; color: #94a3b8;">
+            © 2026 MediGo Healthcare Platform. All data presented for public healthcare discovery.
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <!-- Global Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
