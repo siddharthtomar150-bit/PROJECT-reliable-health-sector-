@@ -73,6 +73,38 @@ button {
   border-radius: var(--radius-sm);
   text-decoration: none;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              box-shadow 0.22s ease, 
+              background-color 0.2s ease, 
+              border-color 0.2s ease, 
+              color 0.2s ease;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 35%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.28) 50%, transparent 100%);
+  transform: rotate(25deg) translateX(-100%);
+  pointer-events: none;
+  transition: transform 0.65s ease;
+}
+
+.btn:hover::after {
+  transform: rotate(25deg) translateX(550%);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .btn-sm {
@@ -90,7 +122,7 @@ button {
 }
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 8px 22px -3px rgba(2, 132, 199, 0.45);
 }
 
 .btn-secondary {
@@ -100,6 +132,7 @@ button {
 }
 .btn-secondary:hover {
   background-color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .btn-accent {
@@ -108,7 +141,7 @@ button {
 }
 .btn-accent:hover {
   background-color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 22px -3px rgba(99, 102, 241, 0.45);
 }
 
 .btn-success {
@@ -117,7 +150,7 @@ button {
 }
 .btn-success:hover {
   background-color: #059669;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 22px -3px rgba(16, 185, 129, 0.45);
 }
 
 .btn-outline {
@@ -127,6 +160,7 @@ button {
 }
 .btn-outline:hover {
   background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .btn-danger-sm {
@@ -136,9 +170,12 @@ button {
   padding: 4px 10px;
   font-size: 0.78rem;
   border-radius: 4px;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .btn-danger-sm:hover {
   background: #fee2e2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
 }
 
 /* Forms */

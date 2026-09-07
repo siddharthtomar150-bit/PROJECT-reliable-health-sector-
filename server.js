@@ -8,28 +8,60 @@ import { initDb, dbGet, dbAll, dbRun, logPrivacyAudit } from './database.js';
 import { encryptField, decryptField, maskPhoneNumber, maskEmail, generateChecksum } from './security_crypto.js';
 import { HEALTH_SCHEMES_CATALOG, validateSchemeCard, isHospitalEmpanelled } from './schemes_catalog.js';
 import { SYMPTOM_DATABASE, DISEASE_DATABASE, CLINICAL_TRIAGE_PROTOCOLS } from './data.js';
+import {
+  fileAccessGuard,
+  globalApiLimiter,
+  authLimiter,
+  checkPinLockout,
+  recordPinFailure,
+  clearPinFailures,
+  xssSanitizerMiddleware,
+  validateEmail,
+  validatePassword,
+  sanitizeNonNegativeInt,
+  hardenedSecurityHeaders
+} from './security_middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const JWT_SECRET = 'medigo_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'medigo_super_secret_jwt_key_2026_clinical_dpdp_aes_v2';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-app.use(express.json());
+// Remove Express fingerprint to prevent technology reconnaissance
+app.disable('x-powered-by');
 
-// Privacy & Web Security Headers (DPDP / HIPAA Web Hardening)
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
-  next();
-});
+// 1. Hardened Security Headers (Anti-Clickjacking, CSP, No-Sniff, Permissions-Policy)
+app.use(hardenedSecurityHeaders);
 
-// Serve static frontend files
-app.use(express.static(__dirname));
+// 2. Strict CORS policy
+app.use(cors({
+  origin: true, // Reflect request origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400
+}));
+
+// 3. Payload size limiting (Prevents memory exhaustion / DoS attacks)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// 4. XSS & Script Injection Sanitizer for all incoming payloads
+app.use(xssSanitizerMiddleware);
+
+// 5. Global API Rate Limiting
+app.use('/api/', globalApiLimiter);
+
+// 6. Sensitive File Protection (Blocks DB, Source Code, Configs from Exfiltration)
+app.use(fileAccessGuard);
+
+// 7. Serve static frontend files with dotfiles restricted
+app.use(express.static(__dirname, {
+  dotfiles: 'deny',
+  index: ['index.html'],
+  maxAge: '1h'
+}));
 
 // Initialize Database on Startup
 initDb().catch(err => {
@@ -42,12 +74,12 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
+    return res.status(401).json({ error: 'Access denied. No authentication token provided.' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token.' });
+      return res.status(403).json({ error: 'Invalid or expired session token. Please log in again.' });
     }
     req.user = user;
     next();
@@ -56,8 +88,8 @@ function authenticateToken(req, res, next) {
 
 // ==================== AUTHENTICATION API ====================
 
-// 1. Register User (Patient Portal)
-app.post('/api/auth/register', async (req, res) => {
+// 1. Register User (Patient Portal) — Protected with Rate Limiting & Password Policy
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { name, email, password } = req.body;
   const role = 'patient';
 
@@ -65,26 +97,44 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ error: 'Please provide name, email, and password.' });
   }
 
+  // Name length validation
+  const cleanName = String(name).trim();
+  if (cleanName.length < 2 || cleanName.length > 70) {
+    return res.status(400).json({ error: 'Name must be between 2 and 70 characters.' });
+  }
+
+  // Email format validation
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+
+  // Password strength enforcement
+  const pwdCheck = validatePassword(password);
+  if (!pwdCheck.valid) {
+    return res.status(400).json({ error: pwdCheck.message });
+  }
+
   try {
     // Check if user already exists
-    const existingUser = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+    const cleanEmail = email.trim().toLowerCase();
+    const existingUser = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists.' });
     }
 
-    // Hash password
+    // Hash password with bcrypt (10 rounds)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Insert user as patient
     const result = await dbRun(
       'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      [name, email, hashedPassword, role]
+      [cleanName, cleanEmail, hashedPassword, role]
     );
 
     // Create Token
     const token = jwt.sign(
-      { id: result.id, name, email, role },
+      { id: result.id, name: cleanName, email: cleanEmail, role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -92,7 +142,7 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { id: result.id, name, email, role }
+      user: { id: result.id, name: cleanName, email: cleanEmail, role }
     });
   } catch (err) {
     console.error('Registration error:', err);
@@ -100,16 +150,21 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 2. Login User
-app.post('/api/auth/login', async (req, res) => {
+// 2. Login User — Protected with Rate Limiting (Anti-Brute Force)
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Please provide email and password.' });
   }
 
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: 'Invalid email format.' });
+  }
+
   try {
-    const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (!user) {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
@@ -325,7 +380,7 @@ app.get('/api/hospitals', async (req, res) => {
   }
 });
 
-// Update Bed Availability (Admin only)
+// Update Bed Availability (Admin only) — Boundary Validated
 app.put('/api/hospitals/:id/beds', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { icu, emergency, general } = req.body;
@@ -344,16 +399,22 @@ app.put('/api/hospitals/:id/beds', authenticateToken, async (req, res) => {
     const params = [];
 
     if (icu !== undefined) {
+      const num = sanitizeNonNegativeInt(icu, -1, 5000);
+      if (num < 0) return res.status(400).json({ error: 'Invalid ICU bed count. Must be between 0 and 5000.' });
       fields.push('icu_available = ?');
-      params.push(icu);
+      params.push(num);
     }
     if (emergency !== undefined) {
+      const num = sanitizeNonNegativeInt(emergency, -1, 5000);
+      if (num < 0) return res.status(400).json({ error: 'Invalid Emergency bed count. Must be between 0 and 5000.' });
       fields.push('emergency_beds_available = ?');
-      params.push(emergency);
+      params.push(num);
     }
     if (general !== undefined) {
+      const num = sanitizeNonNegativeInt(general, -1, 20000);
+      if (num < 0) return res.status(400).json({ error: 'Invalid Inpatient ward bed count. Must be between 0 and 20000.' });
       fields.push('general_available = ?');
-      params.push(general);
+      params.push(num);
     }
 
     if (fields.length === 0) {
@@ -990,20 +1051,50 @@ app.post('/api/privacy/purge-data', authenticateToken, async (req, res) => {
   }
 });
 
-// 6. Emergency Medical Pass & PIN Verification (For Emergency Responders / Attending Doctors)
+// 6. Emergency Medical Pass & PIN Verification — Protected with Anti-Brute-Force Lockout Guard
 app.post('/api/emergency/verify-pin', authenticateToken, async (req, res) => {
   const { emergencyPin } = req.body;
 
+  // 1. Check if user/IP is currently locked out due to excessive failed attempts
+  const lockoutStatus = checkPinLockout(req.user.id);
+  if (lockoutStatus.isLocked) {
+    await logPrivacyAudit(req.user.id, 'Blocked Attacker / Script', 'security_guard', 'PIN_LOCKOUT_BLOCKED', `Blocked verification attempt during lockout (${lockoutStatus.minutesRemaining} mins remaining)`, req.ip, 'BLOCKED');
+    return res.status(429).json({
+      error: `Security Lockout Active: Too many failed PIN attempts. Please wait ${lockoutStatus.minutesRemaining} minutes before trying again.`,
+      isLocked: true,
+      minutesRemaining: lockoutStatus.minutesRemaining
+    });
+  }
+
   try {
     const settings = await dbGet('SELECT emergency_pin FROM patient_privacy_settings WHERE user_id = ?', [req.user.id]);
-    const expectedPin = settings?.emergency_pin || '1234';
+    const expectedPin = String(settings?.emergency_pin || '1234').trim();
+    const providedPin = String(emergencyPin || '').trim();
 
-    if (emergencyPin !== expectedPin) {
-      await logPrivacyAudit(req.user.id, 'Emergency Responder / Guest', 'emergency_crew', 'EMERGENCY_PIN_FAIL', 'Failed emergency PIN unlock attempt', req.ip, 'FAILED');
-      return res.status(401).json({ error: 'Invalid Emergency Privacy PIN.' });
+    // Constant-time length check & string equality check
+    if (!providedPin || providedPin.length !== 4 || providedPin !== expectedPin) {
+      const failState = recordPinFailure(req.user.id);
+      await logPrivacyAudit(req.user.id, 'Emergency Responder / Guest', 'emergency_crew', 'EMERGENCY_PIN_FAIL', `Failed emergency PIN attempt (${failState.remainingAttempts} attempts remaining)`, req.ip, 'FAILED');
+
+      if (failState.isLocked) {
+        return res.status(429).json({
+          error: 'Maximum PIN attempts exceeded. Your emergency medical pass has been locked for 15 minutes for your protection.',
+          isLocked: true,
+          remainingAttempts: 0,
+          minutesRemaining: failState.minutesRemaining
+        });
+      }
+
+      return res.status(401).json({
+        error: `Invalid Emergency Privacy PIN. ${failState.remainingAttempts} attempts remaining before security lockout.`,
+        remainingAttempts: failState.remainingAttempts
+      });
     }
 
-    // Unlocked successfully: retrieve unmasked emergency medical data
+    // Success: Clear any prior failure records
+    clearPinFailures(req.user.id);
+
+    // Retrieve unmasked emergency medical data
     const user = await dbGet('SELECT id, name, email, blood_group, emergency_contact, allergies FROM users WHERE id = ?', [req.user.id]);
     const records = await dbAll('SELECT title, date, hospital, doctor, type, summary, blood_group FROM health_records WHERE user_id = ? ORDER BY date DESC LIMIT 5', [req.user.id]);
 
@@ -1260,16 +1351,34 @@ app.post('/api/symptoms/check', async (req, res) => {
 
 // ==================== HOSPITAL ADMIN DASHBOARD API ====================
 
-// 1. Register Hospital Admin and Create/Link Hospital Profile
-app.post('/api/auth/register-hospital', async (req, res) => {
+// 1. Register Hospital Admin and Create/Link Hospital Profile — Protected with Rate Limiting & Anti-Hijack Guard
+app.post('/api/auth/register-hospital', authLimiter, async (req, res) => {
   const { name, email, password, hospitalName, city, state, existingHospitalId, licenseNumber, verificationDoc } = req.body;
 
   if (!name || !email || !password || (!hospitalName && !existingHospitalId)) {
     return res.status(400).json({ error: 'Please provide admin name, email, password, and hospital name.' });
   }
 
+  // Name length validation
+  const cleanName = String(name).trim();
+  if (cleanName.length < 2 || cleanName.length > 70) {
+    return res.status(400).json({ error: 'Admin name must be between 2 and 70 characters.' });
+  }
+
+  // Email format validation
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: 'Please enter a valid business email address.' });
+  }
+
+  // Password strength enforcement
+  const pwdCheck = validatePassword(password);
+  if (!pwdCheck.valid) {
+    return res.status(400).json({ error: pwdCheck.message });
+  }
+
   try {
-    const existingUser = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+    const cleanEmail = email.trim().toLowerCase();
+    const existingUser = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists.' });
     }
@@ -1282,6 +1391,12 @@ app.post('/api/auth/register-hospital', async (req, res) => {
     if (hospitalId) {
       const existingHosp = await dbGet('SELECT * FROM hospitals WHERE id = ?', [hospitalId]);
       if (existingHosp) {
+        // Anti-Hijacking Guard: Verify if an admin already claimed this hospital
+        const existingAdmin = await dbGet('SELECT id, email FROM users WHERE hospital_id = ?', [hospitalId]);
+        if (existingAdmin) {
+          return res.status(409).json({ error: 'This hospital has already been claimed by a registered administrator. If you believe this is an error, please contact MediGo Verification Operations.' });
+        }
+
         // Update existing hospital with admin verification info
         await dbRun(`
           UPDATE hospitals 
@@ -1289,7 +1404,7 @@ app.post('/api/auth/register-hospital', async (req, res) => {
               verification_doc_ref = COALESCE(NULLIF(?, ''), verification_doc_ref), 
               verification_status = ? 
           WHERE id = ?
-        `, [name, licenseNumber || '', verificationDoc || '', verStatus, hospitalId]);
+        `, [cleanName, licenseNumber || '', verificationDoc || '', verStatus, hospitalId]);
       } else {
         hospitalId = null;
       }
@@ -1756,6 +1871,6 @@ app.post('/api/symptoms/check', async (req, res) => {
 });
 
 // Start the Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

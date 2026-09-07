@@ -709,9 +709,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.patient-nav-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
       document.querySelectorAll('.patient-nav-tab').forEach(t => {
+        t.classList.remove('active');
         t.style.background = 'transparent';
         t.style.color = 'var(--text-muted)';
       });
+      e.currentTarget.classList.add('active');
       e.currentTarget.style.background = 'var(--primary-light)';
       e.currentTarget.style.color = 'var(--primary-hover)';
 
@@ -733,6 +735,15 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSchemesCatalog();
       }
     });
+  });
+
+  // Dynamic Mouse-Tracking Spotlight Effect for Cards
+  document.addEventListener('mousemove', (e) => {
+    const card = e.target.closest('.hospital-card, .digital-scheme-card, .crypto-status-card, .medical-id-card');
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+    card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
   });
 
   // List vs Map View Switcher
@@ -981,6 +992,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Close Buttons
     if (e.target.closest('.modal-close') || e.target.classList.contains('modal-backdrop')) {
       document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+    }
+
+    // Toggle Favorite Action
+    if (e.target.closest('.btn-toggle-fav')) {
+      const favBtn = e.target.closest('.btn-toggle-fav');
+      const hospId = favBtn.dataset.id;
+      if (hospId) toggleFavorite(hospId);
     }
 
     // Book Ambulance Action (Switching to the Ambulance booking tab and selecting hospital)

@@ -57,6 +57,15 @@
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.03);
   --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04);
   --shadow-xl: 0 20px 35px -5px rgba(15, 23, 42, 0.12);
+
+  /* Advanced Hover Motion Physics & Layered Glows */
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --shadow-hover-card: 0 20px 40px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(2, 132, 199, 0.22), 0 8px 24px -4px rgba(2, 132, 199, 0.1);
+  --shadow-hover-btn-primary: 0 8px 22px -3px rgba(2, 132, 199, 0.45), 0 2px 6px rgba(2, 132, 199, 0.2);
+  --shadow-hover-btn-danger: 0 8px 22px -3px rgba(220, 38, 38, 0.48), 0 2px 6px rgba(220, 38, 38, 0.25);
+  --shadow-hover-btn-teal: 0 8px 22px -3px rgba(15, 118, 110, 0.42), 0 2px 6px rgba(15, 118, 110, 0.2);
 }
 
 /* Base Resets */
@@ -114,11 +123,27 @@ a {
   align-items: center;
   gap: 6px;
   color: var(--slate-300);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.hotline-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
 }
 
 .hotline-item strong {
   color: #f87171;
   font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.hotline-item:hover strong {
+  color: #fca5a5;
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
 }
 
 .network-badge {
@@ -130,6 +155,13 @@ a {
   border-radius: var(--radius-full);
   font-size: 0.74rem;
   color: var(--slate-300);
+  transition: all 0.2s ease;
+}
+
+.network-badge:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .app-header {
@@ -142,6 +174,11 @@ a {
   border-bottom: 1px solid var(--slate-200);
   padding: 0.85rem 1.5rem;
   box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.25s ease;
+}
+
+.app-header:hover {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
 .nav-container {
@@ -158,18 +195,30 @@ a {
   align-items: center;
   gap: 0.85rem;
   text-decoration: none;
+  transition: transform 0.2s var(--ease-spring);
 }
 
-.brand-icon {
+.brand:hover {
+  transform: translateY(-1px);
+}
+
+.brand-icon, .brand-icon-svg {
   width: 40px;
   height: 40px;
   background: linear-gradient(135deg, #0284c7, #0369a1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+  transition: all 0.3s var(--ease-spring);
+}
+
+.brand:hover .brand-icon,
+.brand:hover .brand-icon-svg {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55), 0 0 12px rgba(56, 189, 248, 0.4);
 }
 
 .brand-title {
@@ -178,6 +227,11 @@ a {
   color: var(--slate-900);
   line-height: 1.1;
   font-family: var(--font-display);
+  transition: color 0.2s ease;
+}
+
+.brand:hover .brand-title {
+  color: var(--primary);
 }
 
 .brand-subtitle {
@@ -186,6 +240,11 @@ a {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.brand:hover .brand-subtitle {
+  color: var(--slate-700);
 }
 
 .header-actions {
@@ -205,6 +264,15 @@ a {
   color: #065f46;
   padding: 5px 12px;
   border-radius: var(--radius-full);
+  transition: all 0.25s var(--ease-spring);
+  cursor: default;
+}
+
+.sync-badge:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  background: #d1fae5;
+  border-color: #6ee7b7;
 }
 
 .pulse-dot {
@@ -306,22 +374,40 @@ a {
   font-weight: 600;
   color: var(--slate-600);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.18s ease-in-out;
+  transition: all 0.24s var(--ease-spring);
+  position: relative;
+}
+
+.patient-nav-tab svg {
+  transition: transform 0.24s var(--ease-spring);
 }
 
 .patient-nav-tab:hover {
-  color: var(--slate-900);
-  background: var(--slate-100);
+  color: var(--slate-900) !important;
+  background: var(--slate-100) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  border-color: var(--slate-200);
+}
+
+.patient-nav-tab:hover svg {
+  transform: scale(1.2);
 }
 
 .patient-nav-tab.active {
-  background: var(--primary-subtle);
-  color: var(--primary-hover);
+  background: var(--primary-subtle) !important;
+  color: var(--primary-hover) !important;
   border: 1px solid var(--primary-border);
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.16);
+}
+
+.patient-nav-tab.active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.26);
+  border-color: var(--primary);
 }
 
 .patient-subview {
@@ -333,7 +419,7 @@ a {
 }
 
 /* ==========================================================================
-   Buttons & Form Controls
+   Buttons & Form Controls — High-Performance Micro-Interactions
    ========================================================================== */
 
 .btn {
@@ -347,23 +433,68 @@ a {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.18s ease-in-out;
   border: 1px solid transparent;
   text-decoration: none;
   line-height: 1.2;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s var(--ease-spring),
+              box-shadow 0.22s ease,
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease;
+}
+
+/* Specular Shimmer Sheen on Hover */
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 35%;
+  height: 200%;
+  background: linear-gradient(
+    90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.3) 50%, 
+    transparent 100%
+  );
+  transform: rotate(25deg) translateX(-100%);
+  pointer-events: none;
+  transition: transform 0.65s ease;
+}
+
+.btn:hover::after {
+  transform: rotate(25deg) translateX(550%);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn svg {
+  transition: transform 0.22s var(--ease-spring);
+}
+
+.btn:hover svg {
+  transform: scale(1.12);
 }
 
 .btn-primary {
   background: var(--primary);
   color: #ffffff;
   border-color: var(--primary);
-  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+  box-shadow: var(--shadow-hover-btn-primary);
 }
 
 .btn-outline {
@@ -376,6 +507,7 @@ a {
   background: var(--slate-100);
   border-color: var(--slate-400);
   color: var(--slate-900);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 }
 
 .btn-danger {
@@ -388,15 +520,20 @@ a {
 .btn-danger:hover {
   background: #b91c1c;
   border-color: #b91c1c;
+  box-shadow: var(--shadow-hover-btn-danger);
 }
 
 .btn-teal {
   background: var(--medical-teal);
   color: #ffffff;
+  border-color: var(--medical-teal);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
 }
 
 .btn-teal:hover {
   background: #115e59;
+  border-color: #115e59;
+  box-shadow: var(--shadow-hover-btn-teal);
 }
 
 .form-group {
@@ -509,20 +646,69 @@ a {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
   display: flex;
   flex-direction: column;
+  transition: transform 0.28s var(--ease-smooth), 
+              box-shadow 0.28s var(--ease-smooth), 
+              border-color 0.25s ease;
+}
+
+/* Luminous Top Brand Accent Line on Hover */
+.hospital-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #10b981 100%);
+  opacity: 0;
+  transform: scaleX(0.15);
+  transform-origin: center;
+  transition: opacity 0.28s ease, transform 0.28s var(--ease-smooth);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: 5;
+}
+
+/* Dynamic Specular Spotlight Following Cursor */
+.hospital-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    450px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+    rgba(2, 132, 199, 0.08),
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
 }
 
 .hospital-card:hover {
-  border-color: var(--slate-300);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-5px);
+  border-color: rgba(2, 132, 199, 0.35);
+  box-shadow: var(--shadow-hover-card);
+}
+
+.hospital-card:hover::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.hospital-card:hover::after {
+  opacity: 1;
 }
 
 .hospital-card-body {
   padding: 1.25rem 1.35rem;
   display: flex;
   gap: 1.25rem;
+  position: relative;
+  z-index: 3;
 }
 
 @media (max-width: 640px) {
@@ -553,11 +739,12 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.4s var(--ease-smooth), filter 0.4s ease;
 }
 
 .hospital-card:hover .hospital-thumb-img {
-  transform: scale(1.04);
+  transform: scale(1.08);
+  filter: brightness(1.03) contrast(1.02);
 }
 
 .hospital-thumb-type-tag {
@@ -570,15 +757,22 @@ a {
   border-radius: var(--radius-xs);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.22s var(--ease-spring), box-shadow 0.22s ease;
+  z-index: 4;
+}
+
+.hospital-card:hover .hospital-thumb-type-tag {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 .hospital-thumb-type-tag.govt {
-  background: rgba(6, 95, 70, 0.85);
+  background: rgba(6, 95, 70, 0.88);
   color: #ffffff;
 }
 
 .hospital-thumb-type-tag.pvt {
-  background: rgba(2, 132, 199, 0.85);
+  background: rgba(2, 132, 199, 0.88);
   color: #ffffff;
 }
 
@@ -603,6 +797,11 @@ a {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  transition: color 0.2s ease;
+}
+
+.hospital-card:hover .hospital-title-area h3 {
+  color: var(--primary-hover);
 }
 
 .badge-tag {
@@ -613,6 +812,13 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s ease;
+  cursor: default;
+}
+
+.badge-tag:hover {
+  transform: translateY(-1.5px) scale(1.04);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
 .badge-tag.nabh {
@@ -643,7 +849,7 @@ a {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
@@ -658,6 +864,46 @@ a {
   border: 1px solid #fde68a;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
+  transition: transform 0.22s var(--ease-spring), box-shadow 0.22s ease;
+  cursor: default;
+}
+
+.rating-badge:hover {
+  transform: translateY(-1.5px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+.btn-fav-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--slate-200);
+  background: var(--surface-white);
+  color: var(--slate-400);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.24s var(--ease-spring);
+}
+
+.btn-fav-icon:hover {
+  transform: scale(1.22) rotate(-8deg);
+  border-color: #fca5a5;
+  color: #ef4444;
+  background: #fef2f2;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+}
+
+.btn-fav-icon.active {
+  border-color: #fca5a5;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.btn-fav-icon.active:hover {
+  transform: scale(1.26);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.38);
 }
 
 .cost-estimate-label {
@@ -675,12 +921,30 @@ a {
   padding: 8px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--slate-200);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.hospital-card:hover .bed-telemetry-grid {
+  background: #f8fafc;
+  border-color: var(--slate-300);
 }
 
 .bed-telemetry-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all 0.22s var(--ease-smooth);
+  cursor: default;
+}
+
+.bed-telemetry-item:hover {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
 }
 
 .bed-telemetry-label {
@@ -728,6 +992,11 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  transition: color 0.18s ease;
+}
+
+.meta-item:hover {
+  color: var(--slate-900);
 }
 
 .meta-item strong {
@@ -744,6 +1013,8 @@ a {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  position: relative;
+  z-index: 3;
 }
 
 .card-action-group {
@@ -751,6 +1022,46 @@ a {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.btn-book-amb:hover svg {
+  transform: scale(1.2) rotate(-6deg);
+}
+
+.btn-open-google-map {
+  transition: all 0.22s var(--ease-spring) !important;
+}
+
+.btn-open-google-map:hover {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -2px rgba(2, 132, 199, 0.35);
+}
+
+.btn-open-google-map:hover svg {
+  transform: scale(1.22) translateY(-1px);
+}
+
+.btn-view-profile {
+  transition: all 0.22s var(--ease-spring) !important;
+}
+
+.btn-view-profile:hover {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -2px rgba(2, 132, 199, 0.35);
+}
+
+.btn-view-profile:hover svg {
+  transform: scale(1.18);
+}
+
+.btn-toggle-compare:hover svg {
+  transform: rotate(90deg) scale(1.15);
 }
 
 /* ==========================================================================
@@ -1180,24 +1491,39 @@ a {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
   color: #ffffff;
-  padding: 5px 14px;
+  padding: 6px 15px;
   border-radius: var(--radius-full);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.24s var(--ease-spring);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .city-pill:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-2.5px) scale(1.04);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+.city-pill:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .city-pill.active {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
+  box-shadow: 0 0 14px rgba(2, 132, 199, 0.6);
+}
+
+.city-pill.active:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: translateY(-2.5px) scale(1.04);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.7), 0 0 16px rgba(56, 189, 248, 0.5);
 }
 
 /* Hero Acuity Filter Chips */
@@ -1208,30 +1534,86 @@ a {
 }
 
 .acuity-chip {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #e2e8f0;
-  padding: 7px 14px;
+  padding: 8px 15px;
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  transition: all 0.18s ease;
+  gap: 8px;
+  transition: all 0.25s var(--ease-spring);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .acuity-chip:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-3px);
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+.acuity-chip:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.acuity-chip .dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: transform 0.24s var(--ease-spring), box-shadow 0.24s ease;
+}
+
+.acuity-chip:hover .dot-indicator {
+  transform: scale(1.45);
+}
+
+#chipIcuOnly:hover {
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.28);
+}
+#chipIcuOnly:hover .dot-indicator {
+  box-shadow: 0 0 10px #ef4444;
+}
+
+#chipPmjayOnly:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.28);
+}
+#chipPmjayOnly:hover .dot-indicator {
+  box-shadow: 0 0 10px #10b981;
+}
+
+#chipGovtOnly:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.28);
+}
+#chipGovtOnly:hover .dot-indicator {
+  box-shadow: 0 0 10px #38bdf8;
+}
+
+#chipNabhOnly:hover {
+  border-color: rgba(20, 184, 166, 0.6);
+  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.28);
+}
+#chipNabhOnly:hover .dot-indicator {
+  box-shadow: 0 0 10px #14b8a6;
 }
 
 .acuity-chip.active {
   background: #ffffff;
   color: var(--slate-900);
   border-color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.acuity-chip.active:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
 
 .dot-indicator {
@@ -1305,10 +1687,14 @@ a {
   color: var(--slate-400);
   cursor: pointer;
   padding: 4px;
+  border-radius: var(--radius-xs);
+  transition: all 0.22s var(--ease-spring);
 }
 
 .modal-close:hover {
-  color: var(--slate-800);
+  color: var(--ruby-emergency);
+  transform: scale(1.25) rotate(90deg);
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* ==========================================================================
@@ -1373,6 +1759,13 @@ a {
   padding: 3px 9px;
   border-radius: var(--radius-sm);
   color: var(--slate-300);
+  transition: all 0.2s ease;
+}
+
+.compliance-tag:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .footer-links {
@@ -1387,15 +1780,488 @@ a {
 .footer-links li a {
   color: var(--slate-400);
   text-decoration: none;
-  transition: color 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
 }
 
 .footer-links li a:hover {
   color: #38bdf8;
+  transform: translateX(4px);
 }
 
 .footer-links strong {
   color: #f87171;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   Advanced Interactive Hover System — Modules, Cards & Presets
+   ========================================================================== */
+
+/* Favorites Filter Button Hover */
+.btn-filter-fav {
+  transition: all 0.22s var(--ease-spring) !important;
+}
+
+.btn-filter-fav:hover {
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  background: #fef2f2 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* AI Clinical Triage Preset Chips */
+.ai-preset-chip {
+  cursor: pointer;
+  transition: transform 0.22s var(--ease-spring),
+              box-shadow 0.22s ease,
+              border-color 0.2s ease,
+              background-color 0.2s ease !important;
+}
+
+.ai-preset-chip:hover {
+  transform: translateY(-2.5px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+  filter: brightness(0.97);
+}
+
+.ai-preset-chip:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Triage Result Box Hover */
+.triage-result-box {
+  transition: transform 0.25s var(--ease-smooth),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+
+.triage-result-box:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-border);
+}
+
+/* Ambulance Dispatch Timeline Step Hover */
+.timeline-step {
+  cursor: pointer;
+  transition: transform 0.22s var(--ease-spring);
+}
+
+.timeline-step:hover {
+  transform: translateY(-3px);
+}
+
+.timeline-step:hover .timeline-dot {
+  transform: scale(1.18);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+/* Vehicle Telemetry Item Hover */
+.vehicle-telemetry-card .telemetry-item {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, transform 0.2s var(--ease-spring);
+  cursor: default;
+}
+
+.vehicle-telemetry-card .telemetry-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Digital Scheme Cards Grid & Hover */
+.scheme-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.digital-scheme-card {
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.3s var(--ease-smooth),
+              box-shadow 0.3s var(--ease-smooth);
+}
+
+.digital-scheme-card:hover {
+  transform: translateY(-6px) scale(1.018);
+}
+
+.digital-scheme-card.pmjay {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 60%, #f59e0b 100%);
+  border: 1px solid rgba(254, 230, 138, 0.5);
+}
+
+.digital-scheme-card.pmjay:hover {
+  box-shadow: 0 16px 36px -4px rgba(217, 119, 6, 0.45), 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+.digital-scheme-card.abha {
+  background: linear-gradient(135deg, #065f46 0%, #059669 60%, #10b981 100%);
+  border: 1px solid rgba(167, 243, 208, 0.5);
+}
+
+.digital-scheme-card.abha:hover {
+  box-shadow: 0 16px 36px -4px rgba(5, 150, 105, 0.45), 0 0 20px rgba(16, 185, 129, 0.25);
+}
+
+.digital-scheme-card.cghs {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+  border: 1px solid rgba(147, 197, 253, 0.5);
+}
+
+.digital-scheme-card.cghs:hover {
+  box-shadow: 0 16px 36px -4px rgba(37, 99, 235, 0.45), 0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+.digital-scheme-card.state {
+  background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 60%, #8b5cf6 100%);
+  border: 1px solid rgba(221, 214, 254, 0.5);
+}
+
+.digital-scheme-card.state:hover {
+  box-shadow: 0 16px 36px -4px rgba(109, 40, 217, 0.45);
+}
+
+.digital-scheme-card.private {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 60%, #14b8a6 100%);
+  border: 1px solid rgba(153, 246, 228, 0.5);
+}
+
+.digital-scheme-card.private:hover {
+  box-shadow: 0 16px 36px -4px rgba(13, 148, 136, 0.45);
+}
+
+.scheme-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.scheme-card-emblem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scheme-card-number {
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.scheme-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.hologram-chip {
+  width: 40px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #fed7aa 25%, #a7f3d0 50%, #fbcfe8 75%, #bae6fd 100%);
+  background-size: 200% 200%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s var(--ease-spring), filter 0.4s ease;
+}
+
+.digital-scheme-card:hover .hologram-chip {
+  transform: rotate(8deg) scale(1.15);
+  filter: brightness(1.25) contrast(1.15);
+}
+
+/* Scheme Catalog Directory Card Hover */
+.scheme-catalog-card {
+  background: var(--surface-white);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  transition: transform 0.25s var(--ease-smooth),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+
+.scheme-catalog-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-border);
+  box-shadow: 0 10px 24px -4px rgba(2, 132, 199, 0.15);
+}
+
+.btn-select-catalog-scheme:hover svg {
+  transform: scale(1.18);
+}
+
+/* Privacy & Crypto Status Card Hover */
+.privacy-shield-banner {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #0f766e 100%);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  border: 1px solid #059669;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.scheme-wallet-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #0284c7 100%);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  border: 1px solid #3b82f6;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.crypto-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.crypto-status-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: transform 0.25s var(--ease-smooth),
+              background-color 0.25s ease,
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+  cursor: default;
+}
+
+.crypto-status-card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.crypto-status-card .label {
+  font-size: 0.74rem;
+  color: #a7f3d0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.crypto-status-card .value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Digital Medical ID Pass Hover */
+.medical-id-card {
+  background: #ffffff;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s var(--ease-smooth),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+
+.medical-id-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -4px rgba(5, 150, 105, 0.16);
+  border-color: #34d399;
+}
+
+.medical-id-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #d1fae5;
+}
+
+.masked-data-field {
+  font-family: monospace;
+  font-size: 0.92rem;
+  color: var(--slate-700);
+  background: var(--slate-100);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+  letter-spacing: 1px;
+}
+
+/* Privacy Toggle Settings Item Hover */
+.privacy-toggle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  border-bottom: 1px solid var(--slate-200);
+  transition: background-color 0.2s ease, padding 0.2s ease;
+  border-radius: var(--radius-sm);
+}
+
+.privacy-toggle-item:hover {
+  background-color: var(--slate-50);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.privacy-toggle-info h4 {
+  font-size: 0.95rem;
+  color: var(--slate-900);
+  margin-bottom: 3px;
+}
+
+.privacy-toggle-info p {
+  font-size: 0.82rem;
+  color: var(--slate-500);
+  max-width: 620px;
+}
+
+/* Digital Health Records Vault Cards Hover */
+#healthRecordsContainer .card-panel {
+  transition: transform 0.25s var(--ease-smooth),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+
+#healthRecordsContainer .card-panel:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(2, 132, 199, 0.2);
+}
+
+.btn-delete-record {
+  transition: all 0.2s var(--ease-spring) !important;
+}
+
+.btn-delete-record:hover {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+}
+
+/* Data Tables Hover (Audit Trail & Comparison) */
+.audit-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  margin-top: 1rem;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.audit-table th, .audit-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--slate-200);
+  text-align: left;
+}
+
+.audit-table th {
+  background: var(--slate-50);
+  color: var(--slate-700);
+  font-weight: 700;
+}
+
+.audit-table tbody tr {
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.audit-table tbody tr:hover {
+  background-color: var(--slate-100);
+}
+
+.compare-table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+.compare-table tbody tr:hover {
+  background-color: var(--slate-50);
+}
+
+/* Toggle Switch Styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
 }
 
