@@ -118,9 +118,6 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
                     ${h.rating || 4.7} <span style="font-size: 0.72rem; color: #78350f; font-weight: 500;">(${h.reviewCount || 350})</span>
                   </div>
                 </div>
-                <div class="cost-estimate-label">
-                  Est. Avg: ₹${(h.estimatedAvgCost || 500).toLocaleString()}
-                </div>
               </div>
             </div>
 
@@ -519,10 +516,6 @@ export function renderComparisonModal() {
             <tr>
               <td><strong>Accreditation & Sector</strong></td>
               ${compareList.map(h => `<td><span class="badge-tag nabh">${h.accreditation || 'NABH Verified'}</span></td>`).join('')}
-            </tr>
-            <tr>
-              <td><strong>Est. Inpatient Procedure Cost</strong></td>
-              ${compareList.map(h => `<td><strong style="color: var(--primary); font-size: 1.05rem;">₹${(h.estimatedAvgCost || 500).toLocaleString()}</strong></td>`).join('')}
             </tr>
             <tr>
               <td><strong>ICU (Ventilator) Availability</strong></td>
