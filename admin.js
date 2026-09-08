@@ -3,7 +3,7 @@
    Handles Auth, 15 Modules Form State, Dynamic CRUD, Preview & Publish
    ========================================================================== */
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
 const ALL_FACILITIES = [
   'Emergency', 'ICU', 'NICU', 'PICU', 'Blood Bank', 'Pharmacy',
