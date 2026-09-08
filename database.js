@@ -387,6 +387,54 @@ export async function initDb() {
       )
     `);
 
+    // 15. Create Blood Inventory Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS blood_inventory (
+        id TEXT PRIMARY KEY,
+        hospital_id TEXT NOT NULL,
+        hospital_name TEXT NOT NULL,
+        city TEXT,
+        state TEXT,
+        blood_group TEXT NOT NULL,
+        component TEXT NOT NULL,
+        units_available INTEGER NOT NULL DEFAULT 0,
+        contact_phone TEXT,
+        last_updated TEXT
+      )
+    `);
+
+    // 16. Create Urgent Emergency Blood Requests Table (SOS)
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS blood_requests (
+        id TEXT PRIMARY KEY,
+        patient_name TEXT NOT NULL,
+        blood_group TEXT NOT NULL,
+        component TEXT NOT NULL,
+        units_needed INTEGER NOT NULL,
+        hospital_name TEXT NOT NULL,
+        city TEXT NOT NULL,
+        contact_phone TEXT NOT NULL,
+        urgency TEXT NOT NULL,
+        status TEXT DEFAULT 'ACTIVE',
+        created_at TEXT
+      )
+    `);
+
+    // 17. Create Voluntary Blood Donors Table
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS blood_donors (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        blood_group TEXT NOT NULL,
+        city TEXT NOT NULL,
+        contact_phone TEXT NOT NULL,
+        email TEXT,
+        last_donation_date TEXT,
+        availability TEXT DEFAULT 'AVAILABLE',
+        created_at TEXT
+      )
+    `);
+
     // Schema migrations for existing database
     const userCols = await dbAll("PRAGMA table_info(users)");
     const userColNames = userCols.map(c => c.name);
@@ -531,9 +579,150 @@ export async function initDb() {
       console.log(`CSV hospitals already seeded (${hospCount.count} records).`);
     }
 
+    // Seed Blood Bank initial data if empty
+    await seedBloodBankData();
+
     console.log('Database initialized successfully.');
   } catch (error) {
     console.error('Error during database initialization:', error);
+  }
+}
+
+async function seedBloodBankData() {
+  try {
+    const bloodInvCount = await dbGet('SELECT COUNT(*) as count FROM blood_inventory');
+    if (bloodInvCount && bloodInvCount.count > 0) return;
+
+    console.log('Seeding real-time Blood Bank inventory, SOS requests, and donor network...');
+
+    const hospitals = [
+      { id: 'hosp-gov-1', name: 'AIIMS New Delhi', city: 'New Delhi', state: 'Delhi', phone: '+91 11 2658 8500' },
+      { id: 'hosp-gov-2', name: 'Safdarjung Hospital & VMMC', city: 'New Delhi', state: 'Delhi', phone: '+91 11 2616 5060' },
+      { id: 'hosp-1', name: 'Max Super Speciality Hospital, Saket', city: 'New Delhi', state: 'Delhi', phone: '+91 11 2651 5050' },
+      { id: 'hosp-2', name: 'Fortis Escorts Heart Institute', city: 'New Delhi', state: 'Delhi', phone: '+91 11 4713 5000' },
+      { id: 'hosp-3', name: 'Indraprastha Apollo Hospital', city: 'New Delhi', state: 'Delhi', phone: '+91 11 7179 1090' },
+      { id: 'hosp-gov-3', name: 'King George’s Medical University (KGMU)', city: 'Lucknow', state: 'Uttar Pradesh', phone: '+91 522 225 7450' }
+    ];
+
+    const bloodGroups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+    const components = ['Packed Red Blood Cells (PRBC)', 'Whole Blood', 'Platelets', 'Fresh Frozen Plasma (FFP)'];
+
+    let invIndex = 1;
+    for (const h of hospitals) {
+      for (const bg of bloodGroups) {
+        for (const comp of components) {
+          let units = 0;
+          if (bg === 'O+' || bg === 'B+') {
+            units = comp === 'Platelets' ? Math.floor(12 + Math.random() * 15) : Math.floor(25 + Math.random() * 35);
+          } else if (bg === 'A+') {
+            units = comp === 'Platelets' ? Math.floor(8 + Math.random() * 12) : Math.floor(20 + Math.random() * 25);
+          } else if (bg === 'AB+') {
+            units = comp === 'Platelets' ? Math.floor(6 + Math.random() * 8) : Math.floor(14 + Math.random() * 16);
+          } else if (bg === 'O-') {
+            units = comp === 'Platelets' ? Math.floor(2 + Math.random() * 4) : Math.floor(3 + Math.random() * 6);
+          } else if (bg === 'A-' || bg === 'B-') {
+            units = comp === 'Platelets' ? Math.floor(3 + Math.random() * 5) : Math.floor(4 + Math.random() * 8);
+          } else if (bg === 'AB-') {
+            units = comp === 'Platelets' ? Math.floor(1 + Math.random() * 3) : Math.floor(2 + Math.random() * 4);
+          }
+
+          await dbRun(`
+            INSERT OR IGNORE INTO blood_inventory (
+              id, hospital_id, hospital_name, city, state, blood_group, component, units_available, contact_phone, last_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            `binv-${invIndex++}`,
+            h.id,
+            h.name,
+            h.city,
+            h.state,
+            bg,
+            comp,
+            units,
+            h.phone,
+            new Date().toISOString()
+          ]);
+        }
+      }
+    }
+
+    // Seed Active Emergency SOS Requests
+    const initialRequests = [
+      {
+        id: 'breq-101',
+        patientName: 'Aarav Mehra',
+        bloodGroup: 'O-',
+        component: 'Packed Red Blood Cells (PRBC)',
+        unitsNeeded: 2,
+        hospitalName: 'AIIMS New Delhi (Trauma Emergency)',
+        city: 'New Delhi',
+        contactPhone: '+91 98112 34567',
+        urgency: 'Critical - Within 2 hrs',
+        status: 'ACTIVE',
+        createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'breq-102',
+        patientName: 'Priyanka Verma',
+        bloodGroup: 'B-',
+        component: 'Platelets',
+        unitsNeeded: 4,
+        hospitalName: 'Max Super Speciality Hospital, Saket',
+        city: 'New Delhi',
+        contactPhone: '+91 98234 56789',
+        urgency: 'Urgent - Within 6 hrs',
+        status: 'ACTIVE',
+        createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'breq-103',
+        patientName: 'Rameshwar Singh',
+        bloodGroup: 'AB-',
+        component: 'Whole Blood',
+        unitsNeeded: 1,
+        hospitalName: 'Safdarjung Hospital & VMMC',
+        city: 'New Delhi',
+        contactPhone: '+91 99100 88776',
+        urgency: 'Standard - Within 24 hrs',
+        status: 'ACTIVE',
+        createdAt: new Date(Date.now() - 240 * 60 * 1000).toISOString()
+      }
+    ];
+
+    for (const req of initialRequests) {
+      await dbRun(`
+        INSERT OR IGNORE INTO blood_requests (
+          id, patient_name, blood_group, component, units_needed, hospital_name, city, contact_phone, urgency, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        req.id, req.patientName, req.bloodGroup, req.component, req.unitsNeeded,
+        req.hospitalName, req.city, req.contactPhone, req.urgency, req.status, req.createdAt
+      ]);
+    }
+
+    // Seed Sample Verified Voluntary Donors
+    const initialDonors = [
+      { id: 'bdon-1', name: 'Vikram Malhotra', bloodGroup: 'O-', city: 'New Delhi', phone: '+91 98101 22334', email: 'vikram.m@example.com', lastDonation: '2026-05-10', availability: 'AVAILABLE' },
+      { id: 'bdon-2', name: 'Ananya Deshmukh', bloodGroup: 'O+', city: 'New Delhi', phone: '+91 98220 44556', email: 'ananya.d@example.com', lastDonation: '2026-04-18', availability: 'AVAILABLE' },
+      { id: 'bdon-3', name: 'Mohd. Tariq', bloodGroup: 'B+', city: 'New Delhi', phone: '+91 99554 11223', email: 'tariq.m@example.com', lastDonation: '2026-06-01', availability: 'AVAILABLE' },
+      { id: 'bdon-4', name: 'Sunita Chawla', bloodGroup: 'A+', city: 'New Delhi', phone: '+91 97118 99887', email: 'sunita.c@example.com', lastDonation: '2026-03-22', availability: 'AVAILABLE' },
+      { id: 'bdon-5', name: 'Deepak Rawat', bloodGroup: 'AB+', city: 'New Delhi', phone: '+91 98990 77665', email: 'deepak.r@example.com', lastDonation: '2026-07-15', availability: 'AVAILABLE' },
+      { id: 'bdon-6', name: 'Pooja Hegde', bloodGroup: 'A-', city: 'New Delhi', phone: '+91 98331 66554', email: 'pooja.h@example.com', lastDonation: '2026-05-30', availability: 'AVAILABLE' }
+    ];
+
+    for (const d of initialDonors) {
+      await dbRun(`
+        INSERT OR IGNORE INTO blood_donors (
+          id, name, blood_group, city, contact_phone, email, last_donation_date, availability, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        d.id, d.name, d.bloodGroup, d.city, d.phone, d.email, d.lastDonation, d.availability, new Date().toISOString()
+      ]);
+    }
+
+    console.log('Blood Bank inventory, requests, and donor network seeded successfully.');
+  } catch (err) {
+    console.error('Error seeding blood bank data:', err);
   }
 }
 

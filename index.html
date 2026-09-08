@@ -173,6 +173,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
           💳 Govt Schemes &amp; KYC
         </button>
+        <button class="btn patient-nav-tab" data-tab="blood" style="background: transparent; color: var(--text-muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          🩸 Blood Bank &amp; Donors
+        </button>
       </div>
 
       <!-- SUBVIEW: Search & Compare -->
@@ -1043,6 +1047,184 @@
         </div>
       </div>
 
+      <!-- SUBVIEW: 🩸 Blood Bank & Donor Network -->
+      <div id="subview-blood" class="patient-subview" style="display: none;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          
+          <!-- Top Hero / Stats Ribbon -->
+          <div class="blood-hero-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+              <div>
+                <h3 style="font-size: 1.35rem; color: #991b1b; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span>🩸</span> Real-Time Hospital Blood Bank &amp; Donor Network
+                </h3>
+                <p style="font-size: 0.88rem; color: #7f1d1d; margin: 0;">
+                  Live component availability across licensed apex blood centers, emergency SOS broadcasts, and verified citizen donor registry.
+                </p>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-danger" id="btnOpenBloodRequestModal" style="padding: 10px 18px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);">
+                  🚨 Raise Emergency Blood SOS
+                </button>
+                <button class="btn btn-outline" id="btnOpenDonorModal" style="padding: 10px 18px; font-weight: 700; font-size: 0.88rem; background: white; border-color: #f87171; color: #b91c1c;">
+                  ❤️ Register as Donor
+                </button>
+              </div>
+            </div>
+
+            <!-- 4 Quick Stats Badges -->
+            <div class="blood-stats-grid">
+              <div class="blood-stat-card">
+                <span class="blood-stat-val" id="statTotalBloodUnits">--</span>
+                <span class="blood-stat-label">Total Units in Stock</span>
+              </div>
+              <div class="blood-stat-card alert">
+                <span class="blood-stat-val" id="statCriticalBloodAlerts">--</span>
+                <span class="blood-stat-label">Critical Low Alerts (&lt;5 Bags)</span>
+              </div>
+              <div class="blood-stat-card warning">
+                <span class="blood-stat-val" id="statActiveBloodSos">--</span>
+                <span class="blood-stat-label">Active Emergency SOS Broadcasts</span>
+              </div>
+              <div class="blood-stat-card success">
+                <span class="blood-stat-val" id="statVerifiedDonors">--</span>
+                <span class="blood-stat-label">Verified Voluntary Donors</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emergency SOS Live Broadcast Ticker Section -->
+          <div class="card-panel" style="margin-bottom: 1.5rem; border-left: 5px solid #dc2626; background: #fff5f5;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
+              <h4 style="font-size: 1.02rem; color: #991b1b; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <span class="pulse-dot red"></span>
+                <span>Active Urgent Patient Blood Requests (SOS Network)</span>
+              </h4>
+              <span style="font-size: 0.78rem; font-weight: 700; color: #b91c1c; background: #fee2e2; padding: 2px 10px; border-radius: 12px;">
+                Direct Attendant Contact
+              </span>
+            </div>
+            <div id="bloodSosTickerContainer" class="sos-ticker-grid">
+              <!-- Rendered via blood_bank.js -->
+            </div>
+          </div>
+
+          <!-- Live Blood Inventory & Multi-Filter Bar -->
+          <div class="card-panel" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h4 style="font-size: 1.1rem; color: var(--slate-900); margin-bottom: 2px;">
+                  Live Blood Component Stock by Hospital
+                </h4>
+                <p style="font-size: 0.82rem; color: var(--slate-500); margin: 0;">
+                  Filter by ABO/Rh group, blood fraction, or search hospital name
+                </p>
+              </div>
+              <span class="badge-tag" id="bloodStockCountBadge" style="background: #e0f2fe; color: #0284c7; font-weight: 700;">
+                Loading live inventory...
+              </span>
+            </div>
+
+            <!-- Filters -->
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 1.25rem;">
+              <!-- Blood Group Quick Pills -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: var(--slate-600); margin-right: 4px;">Blood Group:</span>
+                <button class="blood-group-chip active" data-group="all">All Groups</button>
+                <button class="blood-group-chip" data-group="O+">O+</button>
+                <button class="blood-group-chip" data-group="O-">O- (Universal)</button>
+                <button class="blood-group-chip" data-group="A+">A+</button>
+                <button class="blood-group-chip" data-group="A-">A-</button>
+                <button class="blood-group-chip" data-group="B+">B+</button>
+                <button class="blood-group-chip" data-group="B-">B-</button>
+                <button class="blood-group-chip" data-group="AB+">AB+</button>
+                <button class="blood-group-chip" data-group="AB-">AB-</button>
+              </div>
+
+              <!-- Component & Search inputs -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+                <div>
+                  <select id="bloodComponentFilter" class="form-select" style="font-weight: 600;">
+                    <option value="all">All Components (Whole Blood, PRBC, Platelets, FFP)</option>
+                    <option value="Packed Red Blood Cells">Packed Red Blood Cells (PRBC)</option>
+                    <option value="Whole Blood">Whole Blood</option>
+                    <option value="Platelets">Platelets (RDP / SDP)</option>
+                    <option value="Fresh Frozen Plasma">Fresh Frozen Plasma (FFP)</option>
+                  </select>
+                </div>
+                <div>
+                  <input type="text" id="bloodSearchInput" class="form-control" placeholder="🔍 Search hospital, city, or blood group...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Blood Inventory Grid Cards -->
+            <div id="bloodInventoryContainer" class="blood-inventory-grid">
+              <!-- Rendered dynamically via blood_bank.js -->
+            </div>
+          </div>
+
+          <!-- Bottom Grid: Compatibility Matrix & Voluntary Donors -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+            
+            <!-- Interactive Blood Compatibility Tool -->
+            <div class="card-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4 style="font-size: 1.05rem; color: var(--slate-900); display: flex; align-items: center; gap: 6px; margin: 0;">
+                  <span>🧪</span> Blood Transfusion Compatibility
+                </h4>
+                <select id="compatBloodSelect" class="form-select" style="width: auto; padding: 4px 10px; font-weight: 700;">
+                  <option value="O-">Group O-</option>
+                  <option value="O+">Group O+</option>
+                  <option value="A-">Group A-</option>
+                  <option value="A+">Group A+</option>
+                  <option value="B-">Group B-</option>
+                  <option value="B+">Group B+</option>
+                  <option value="AB-">Group AB-</option>
+                  <option value="AB+">Group AB+</option>
+                </select>
+              </div>
+
+              <div id="compatInfoBox" style="background: var(--slate-50); border: 1px solid var(--slate-200); padding: 1rem; border-radius: 10px;">
+                <h5 id="compatGroupTitle" style="font-size: 0.95rem; color: #991b1b; margin-bottom: 8px;">Blood Compatibility: Group O-</h5>
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--slate-600); display: block; margin-bottom: 4px;">Can Safely Donate Red Cells To:</span>
+                  <div id="compatCanDonate" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--slate-600); display: block; margin-bottom: 4px;">Can Safely Receive Red Cells From:</span>
+                  <div id="compatCanReceive" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                </div>
+                <div style="font-size: 0.78rem; color: var(--slate-500); border-top: 1px solid var(--slate-200); padding-top: 6px; margin-top: 6px;">
+                  <strong>Clinical Note:</strong> <span id="compatNotes">Universal Red Cell Donor</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Verified Voluntary Donors Directory -->
+            <div class="card-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4 style="font-size: 1.05rem; color: var(--slate-900); display: flex; align-items: center; gap: 6px; margin: 0;">
+                  <span>🤝</span> Verified Voluntary Donors
+                </h4>
+                <button class="btn btn-outline" onclick="document.getElementById('btnOpenDonorModal').click();" style="padding: 4px 10px; font-size: 0.76rem; font-weight: 700;">
+                  + Join Donor Registry
+                </button>
+              </div>
+              <p style="font-size: 0.8rem; color: var(--slate-500); margin-bottom: 0.75rem;">
+                Contact numbers masked for privacy under DPDP regulations.
+              </p>
+
+              <div id="bloodDonorsGrid" class="donors-grid">
+                <!-- Rendered dynamically via blood_bank.js -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
     </section>
 
 
@@ -1162,6 +1344,148 @@
       <div class="modal-body" id="googleMapModalBody" style="padding: 1.25rem;">
         <!-- Dynamically rendered by patient.js openGoogleMapModal -->
       </div>
+    </div>
+  </div>
+
+  <!-- Emergency Blood SOS Request Modal -->
+  <div class="modal-backdrop" id="bloodRequestModal">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header" style="background: #fef2f2; border-bottom: 1px solid #fee2e2;">
+        <h3 style="font-size: 1.15rem; color: #991b1b; display: flex; align-items: center; gap: 8px;">
+          <span>🚨</span> Raise Emergency Blood Request
+        </h3>
+        <button class="modal-close" id="btnCloseBloodRequestModal">&times;</button>
+      </div>
+      <form id="bloodRequestForm" style="padding: 1.5rem;">
+        <p style="font-size: 0.82rem; color: var(--slate-600); margin-bottom: 1.25rem;">
+          Your request will be broadcasted live across the MediGo network and notified to registered donors.
+        </p>
+        
+        <div class="form-group">
+          <label>Patient Full Name *</label>
+          <input type="text" id="reqPatientName" class="form-control" placeholder="e.g. Aarav Mehra" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Blood Group *</label>
+            <select id="reqBloodGroup" class="form-select" style="font-weight: 700;" required>
+              <option value="O+">O+</option>
+              <option value="O-">O- (Universal)</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Units Needed *</label>
+            <input type="number" id="reqUnitsNeeded" class="form-control" min="1" max="10" value="2" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Blood Component Required *</label>
+          <select id="reqComponent" class="form-select" required>
+            <option value="Packed Red Blood Cells (PRBC)">Packed Red Blood Cells (PRBC)</option>
+            <option value="Whole Blood">Whole Blood</option>
+            <option value="Platelets">Platelets (RDP / SDP)</option>
+            <option value="Fresh Frozen Plasma (FFP)">Fresh Frozen Plasma (FFP)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Hospital & Trauma Center *</label>
+          <input type="text" id="reqHospitalName" class="form-control" placeholder="e.g. AIIMS New Delhi / Safdarjung" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>City / Location</label>
+            <input type="text" id="reqCity" class="form-control" value="New Delhi" required>
+          </div>
+          <div class="form-group">
+            <label>Urgency Level *</label>
+            <select id="reqUrgency" class="form-select" style="font-weight: 700; color: #dc2626;" required>
+              <option value="Critical - Within 2 hrs">Critical - Within 2 hrs</option>
+              <option value="Urgent - Within 6 hrs">Urgent - Within 6 hrs</option>
+              <option value="Standard - Within 24 hrs">Standard - Within 24 hrs</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Contact Phone (Attendant / Doctor) *</label>
+          <input type="tel" id="reqContactPhone" class="form-control" placeholder="+91 98112 34567" required>
+        </div>
+
+        <button type="submit" class="btn btn-danger" style="width: 100%; padding: 12px; font-weight: 700; font-size: 0.95rem; margin-top: 10px;">
+          Broadcast Live Emergency Blood SOS
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Voluntary Blood Donor Registration Modal -->
+  <div class="modal-backdrop" id="donorRegisterModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header" style="background: #f0fdf4; border-bottom: 1px solid #dcfce7;">
+        <h3 style="font-size: 1.15rem; color: #166534; display: flex; align-items: center; gap: 8px;">
+          <span>❤️</span> Register as Voluntary Blood Donor
+        </h3>
+        <button class="modal-close" id="btnCloseDonorModal">&times;</button>
+      </div>
+      <form id="donorRegisterForm" style="padding: 1.5rem;">
+        <p style="font-size: 0.82rem; color: var(--slate-600); margin-bottom: 1.25rem;">
+          Join the community hero network. Your phone number is masked for privacy and only shared when critical patients need matching blood.
+        </p>
+
+        <div class="form-group">
+          <label>Your Full Name *</label>
+          <input type="text" id="donorName" class="form-control" placeholder="e.g. Vikram Malhotra" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Blood Group *</label>
+            <select id="donorBloodGroup" class="form-select" style="font-weight: 700;" required>
+              <option value="O+">O+</option>
+              <option value="O-">O- (Universal)</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>City *</label>
+            <input type="text" id="donorCity" class="form-control" value="New Delhi" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Contact Phone *</label>
+          <input type="tel" id="donorPhone" class="form-control" placeholder="+91 98101 22334" required>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address (Optional)</label>
+          <input type="email" id="donorEmail" class="form-control" placeholder="vikram@example.com">
+        </div>
+
+        <div class="form-group">
+          <label>Last Donation Date (if any)</label>
+          <input type="date" id="donorLastDate" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 700; font-size: 0.95rem; margin-top: 10px; background: #059669; border-color: #059669;">
+          Enroll as Verified Donor
+        </button>
+      </form>
     </div>
   </div>
 

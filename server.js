@@ -1875,6 +1875,281 @@ app.post('/api/symptoms/check', async (req, res) => {
   return res.json({ reply: fallbackHtml });
 });
 
+// ==================== BLOOD BANK & DONOR NETWORK API ====================
+
+// 1. Get Blood Inventory (supports bloodGroup, component, city, hospitalId, search)
+app.get('/api/blood/inventory', async (req, res) => {
+  try {
+    const { bloodGroup, component, city, hospitalId, search } = req.query;
+    let sql = 'SELECT * FROM blood_inventory WHERE 1=1';
+    const params = [];
+
+    if (bloodGroup && bloodGroup !== 'all') {
+      sql += ' AND blood_group = ?';
+      params.push(bloodGroup.toUpperCase());
+    }
+
+    if (component && component !== 'all') {
+      sql += ' AND component LIKE ?';
+      params.push(`%${component}%`);
+    }
+
+    if (city && city !== 'all') {
+      sql += ' AND (city LIKE ? OR state LIKE ?)';
+      params.push(`%${city}%`, `%${city}%`);
+    }
+
+    if (hospitalId && hospitalId !== 'all') {
+      sql += ' AND hospital_id = ?';
+      params.push(hospitalId);
+    }
+
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      sql += ' AND (hospital_name LIKE ? OR city LIKE ? OR blood_group LIKE ? OR component LIKE ?)';
+      params.push(s, s, s, s);
+    }
+
+    sql += ' ORDER BY units_available DESC, hospital_name ASC LIMIT 100';
+
+    const items = await dbAll(sql, params);
+    const enriched = items.map(item => ({
+      ...item,
+      status: item.units_available >= 10 ? 'AVAILABLE' : (item.units_available > 0 ? 'LOW_STOCK' : 'CRITICAL_EMPTY'),
+      statusBadge: item.units_available >= 10 ? '🟢 Available' : (item.units_available > 0 ? '🟡 Low Stock (<10)' : '🔴 Critical Out of Stock')
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('Error fetching blood inventory:', err);
+    res.status(500).json({ error: 'Failed to retrieve blood inventory.' });
+  }
+});
+
+// 2. Get Aggregated Blood Bank Metrics & Availability Stats
+app.get('/api/blood/stats', async (req, res) => {
+  try {
+    const totalUnitsRow = await dbGet('SELECT SUM(units_available) as totalUnits FROM blood_inventory');
+    const lowStockRow = await dbGet('SELECT COUNT(*) as lowStockCount FROM blood_inventory WHERE units_available <= 5');
+    const activeReqRow = await dbGet("SELECT COUNT(*) as activeCount FROM blood_requests WHERE status = 'ACTIVE'");
+    const donorsRow = await dbGet('SELECT COUNT(*) as donorCount FROM blood_donors');
+
+    const groupCounts = await dbAll(`
+      SELECT blood_group, SUM(units_available) as units
+      FROM blood_inventory
+      GROUP BY blood_group
+      ORDER BY units DESC
+    `);
+
+    res.json({
+      totalUnits: totalUnitsRow?.totalUnits || 0,
+      lowStockAlerts: lowStockRow?.lowStockCount || 0,
+      activeSosRequests: activeReqRow?.activeCount || 0,
+      verifiedDonors: donorsRow?.donorCount || 0,
+      stockByGroup: groupCounts || []
+    });
+  } catch (err) {
+    console.error('Error fetching blood stats:', err);
+    res.status(500).json({ error: 'Failed to compute blood bank statistics.' });
+  }
+});
+
+// 3. Get Active Emergency SOS Blood Requests
+app.get('/api/blood/requests', async (req, res) => {
+  try {
+    const { city, bloodGroup } = req.query;
+    let sql = 'SELECT * FROM blood_requests WHERE 1=1';
+    const params = [];
+
+    if (bloodGroup && bloodGroup !== 'all') {
+      sql += ' AND blood_group = ?';
+      params.push(bloodGroup.toUpperCase());
+    }
+
+    if (city && city !== 'all') {
+      sql += ' AND city LIKE ?';
+      params.push(`%${city}%`);
+    }
+
+    sql += " ORDER BY CASE urgency WHEN 'Critical - Within 2 hrs' THEN 1 WHEN 'Urgent - Within 6 hrs' THEN 2 ELSE 3 END, created_at DESC LIMIT 50";
+
+    const requests = await dbAll(sql, params);
+    res.json(requests);
+  } catch (err) {
+    console.error('Error fetching blood requests:', err);
+    res.status(500).json({ error: 'Failed to fetch emergency blood requests.' });
+  }
+});
+
+// 4. Post Urgent Emergency SOS Blood Request
+app.post('/api/blood/requests', async (req, res) => {
+  try {
+    const { patientName, bloodGroup, component, unitsNeeded, hospitalName, city, contactPhone, urgency } = req.body;
+
+    if (!patientName || !bloodGroup || !unitsNeeded || !hospitalName || !contactPhone) {
+      return res.status(400).json({ error: 'Patient name, blood group, units, hospital, and contact phone are mandatory.' });
+    }
+
+    const validBloodGroups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+    if (!validBloodGroups.includes(bloodGroup.toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid ABO/Rh blood group.' });
+    }
+
+    const cleanUnits = parseInt(unitsNeeded, 10);
+    if (isNaN(cleanUnits) || cleanUnits <= 0 || cleanUnits > 20) {
+      return res.status(400).json({ error: 'Units needed must be between 1 and 20.' });
+    }
+
+    const requestId = `breq-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const createdAt = new Date().toISOString();
+
+    await dbRun(`
+      INSERT INTO blood_requests (
+        id, patient_name, blood_group, component, units_needed,
+        hospital_name, city, contact_phone, urgency, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+    `, [
+      requestId,
+      patientName.trim(),
+      bloodGroup.toUpperCase(),
+      component || 'Packed Red Blood Cells (PRBC)',
+      cleanUnits,
+      hospitalName.trim(),
+      city ? city.trim() : 'New Delhi',
+      contactPhone.trim(),
+      urgency || 'Urgent - Within 6 hrs',
+      createdAt
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Emergency SOS Blood Request broadcasted across platform successfully.',
+      requestId
+    });
+  } catch (err) {
+    console.error('Error creating blood request:', err);
+    res.status(500).json({ error: 'Failed to broadcast emergency blood request.' });
+  }
+});
+
+// 5. Mark Emergency SOS Blood Request as Fulfilled
+app.put('/api/blood/requests/:id/fulfill', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await dbRun("UPDATE blood_requests SET status = 'FULFILLED' WHERE id = ?", [id]);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Emergency blood request not found.' });
+    }
+    res.json({ success: true, message: 'Blood request marked as fulfilled.' });
+  } catch (err) {
+    console.error('Error fulfilling blood request:', err);
+    res.status(500).json({ error: 'Failed to update blood request status.' });
+  }
+});
+
+// 6. Get Voluntary Blood Donors Directory (Masked Phone for Privacy)
+app.get('/api/blood/donors', async (req, res) => {
+  try {
+    const { bloodGroup, city } = req.query;
+    let sql = 'SELECT id, name, blood_group, city, contact_phone, last_donation_date, availability, created_at FROM blood_donors WHERE 1=1';
+    const params = [];
+
+    if (bloodGroup && bloodGroup !== 'all') {
+      sql += ' AND blood_group = ?';
+      params.push(bloodGroup.toUpperCase());
+    }
+
+    if (city && city !== 'all') {
+      sql += ' AND city LIKE ?';
+      params.push(`%${city}%`);
+    }
+
+    sql += ' ORDER BY created_at DESC LIMIT 50';
+
+    const donors = await dbAll(sql, params);
+    const masked = donors.map(d => ({
+      ...d,
+      maskedPhone: maskPhoneNumber(d.contact_phone)
+    }));
+
+    res.json(masked);
+  } catch (err) {
+    console.error('Error fetching donors:', err);
+    res.status(500).json({ error: 'Failed to retrieve blood donors.' });
+  }
+});
+
+// 7. Register as Voluntary Blood Donor
+app.post('/api/blood/donors', async (req, res) => {
+  try {
+    const { name, bloodGroup, city, contactPhone, email, lastDonationDate } = req.body;
+
+    if (!name || !bloodGroup || !contactPhone) {
+      return res.status(400).json({ error: 'Donor name, blood group, and contact phone are required.' });
+    }
+
+    const validBloodGroups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+    if (!validBloodGroups.includes(bloodGroup.toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid ABO/Rh blood group.' });
+    }
+
+    const donorId = `bdon-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const createdAt = new Date().toISOString();
+
+    await dbRun(`
+      INSERT INTO blood_donors (
+        id, name, blood_group, city, contact_phone, email, last_donation_date, availability, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'AVAILABLE', ?)
+    `, [
+      donorId,
+      name.trim(),
+      bloodGroup.toUpperCase(),
+      city ? city.trim() : 'New Delhi',
+      contactPhone.trim(),
+      email ? email.trim() : null,
+      lastDonationDate || null,
+      createdAt
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Voluntary blood donor enrolled successfully. Thank you for saving lives!',
+      donorId
+    });
+  } catch (err) {
+    console.error('Error enrolling donor:', err);
+    res.status(500).json({ error: 'Failed to register blood donor.' });
+  }
+});
+
+// 8. Update Hospital Blood Inventory Unit Stock (Hospital Admin)
+app.put('/api/blood/inventory/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { unitsAvailable } = req.body;
+
+    const cleanUnits = parseInt(unitsAvailable, 10);
+    if (isNaN(cleanUnits) || cleanUnits < 0) {
+      return res.status(400).json({ error: 'Units available must be a non-negative number.' });
+    }
+
+    const now = new Date().toISOString();
+    const result = await dbRun(
+      'UPDATE blood_inventory SET units_available = ?, last_updated = ? WHERE id = ?',
+      [cleanUnits, now, id]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Blood inventory item not found.' });
+    }
+
+    res.json({ success: true, message: 'Stock units updated successfully.', unitsAvailable: cleanUnits });
+  } catch (err) {
+    console.error('Error updating blood inventory:', err);
+    res.status(500).json({ error: 'Failed to update blood inventory.' });
+  }
+});
+
 // Start the Server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);

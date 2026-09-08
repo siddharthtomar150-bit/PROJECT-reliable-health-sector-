@@ -9,6 +9,7 @@ import {
   openOpdTokenModal,
   openGoogleMapModal
 } from './patient.js?v=2.1';
+import { initBloodBankModule, loadBloodBankData } from './blood_bank.js?v=2.1';
 
 let state = {
   hospitals: [],
@@ -667,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==================== FRONTEND DASHBOARD EVENT LISTENERS ====================
+  initBloodBankModule();
 
   // Search Input listener (with debounce and auto-clear on load)
   const searchInput = document.getElementById('searchInput');
@@ -733,6 +735,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (tabTarget === 'schemes') {
         loadPatientSchemes();
         loadSchemesCatalog();
+      } else if (tabTarget === 'blood') {
+        loadBloodBankData();
       }
     });
   });
