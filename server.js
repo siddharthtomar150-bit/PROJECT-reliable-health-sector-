@@ -56,11 +56,16 @@ app.use('/api/', globalApiLimiter);
 // 6. Sensitive File Protection (Blocks DB, Source Code, Configs from Exfiltration)
 app.use(fileAccessGuard);
 
-// 7. Serve static frontend files with dotfiles restricted
+// 7. Serve static frontend files with dotfiles restricted and fresh cache headers for scripts
 app.use(express.static(__dirname, {
   dotfiles: 'deny',
   index: ['index.html'],
-  maxAge: '1h'
+  maxAge: 0,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
 }));
 
 // Initialize Database on Startup

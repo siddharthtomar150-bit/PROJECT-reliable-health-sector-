@@ -8,7 +8,7 @@ import {
   openHospitalDetailModal,
   openOpdTokenModal,
   openGoogleMapModal
-} from './patient.js';
+} from './patient.js?v=2.1';
 
 let state = {
   hospitals: [],
