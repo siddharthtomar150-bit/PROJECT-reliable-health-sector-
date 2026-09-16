@@ -20,4 +20,4 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Run the hardened application
-CMD ["node", "server.js"]
+CMD ["node", "backend/server.js"]

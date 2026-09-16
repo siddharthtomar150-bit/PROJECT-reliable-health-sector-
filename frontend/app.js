@@ -1,3 +1,4 @@
+// Main client controller: manages global application state, tab navigation, and event listeners.
 import { 
   renderPatientSearch, 
   toggleCompareHospital, 
@@ -271,13 +272,24 @@ async function loadAuditLogs() {
       return;
     }
 
-    const logs = await res.json();
+    const data = await res.json();
+    const logs = Array.isArray(data) ? data : (data.logs || []);
+    const isGuest = data.mode === 'guest_preview';
+
     if (logs.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No access events recorded yet.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = logs.map(l => {
+    const guestNoticeRow = isGuest ? `
+      <tr style="background: #f0f9ff; border-left: 3px solid var(--primary, #0284c7);">
+        <td colspan="7" style="font-size: 0.8rem; color: #0369a1; padding: 10px 14px;">
+          🛡️ <strong>Live Demonstration Audit Stream:</strong> Displaying real-time system cryptographic events. <a href="javascript:void(0)" onclick="window.openLoginModal ? window.openLoginModal() : document.getElementById('loginModalBtn')?.click()" style="color: #0284c7; font-weight: 700; text-decoration: underline; margin-left: 4px;">Log in as Patient</a> to view your personal audit history.
+        </td>
+      </tr>
+    ` : '';
+
+    tbody.innerHTML = guestNoticeRow + logs.map(l => {
       let tagClass = 'success';
       if (l.status === 'FAILED') tagClass = 'failed';
       else if (l.action.includes('VIEW') || l.action.includes('ACCESS') || l.action.includes('VAULT')) tagClass = 'view';
@@ -570,25 +582,209 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ==================== AUTHENTICATION UI EVENT LISTENERS ====================
 
-  // Auth tabs switching
+  // Auth tabs switching (Mobile OTP, Email Login, Register)
+  const tabOtpBtn = document.getElementById('tabOtpBtn');
   const tabLoginBtn = document.getElementById('tabLoginBtn');
   const tabSignupBtn = document.getElementById('tabSignupBtn');
+  const otpAuthContainer = document.getElementById('otpAuthContainer');
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
 
-  if (tabLoginBtn && tabSignupBtn && loginForm && signupForm) {
-    tabLoginBtn.addEventListener('click', () => {
-      tabLoginBtn.classList.add('active');
-      tabSignupBtn.classList.remove('active');
-      loginForm.classList.add('active');
-      signupForm.classList.remove('active');
+  function switchAuthTab(tab) {
+    [tabOtpBtn, tabLoginBtn, tabSignupBtn].forEach(b => {
+      if (b) {
+        b.classList.remove('active');
+        b.style.color = 'var(--slate-500)';
+        b.style.borderBottom = 'none';
+      }
+    });
+    [otpAuthContainer, loginForm, signupForm].forEach(f => {
+      if (f) f.style.display = 'none';
     });
 
-    tabSignupBtn.addEventListener('click', () => {
+    if (tab === 'otp' && tabOtpBtn && otpAuthContainer) {
+      tabOtpBtn.classList.add('active');
+      tabOtpBtn.style.color = 'var(--primary)';
+      tabOtpBtn.style.borderBottom = '2px solid var(--primary)';
+      otpAuthContainer.style.display = 'block';
+    } else if (tab === 'login' && tabLoginBtn && loginForm) {
+      tabLoginBtn.classList.add('active');
+      tabLoginBtn.style.color = 'var(--primary)';
+      tabLoginBtn.style.borderBottom = '2px solid var(--primary)';
+      loginForm.style.display = 'block';
+    } else if (tab === 'signup' && tabSignupBtn && signupForm) {
       tabSignupBtn.classList.add('active');
-      tabLoginBtn.classList.remove('active');
-      signupForm.classList.add('active');
-      loginForm.classList.remove('active');
+      tabSignupBtn.style.color = 'var(--primary)';
+      tabSignupBtn.style.borderBottom = '2px solid var(--primary)';
+      signupForm.style.display = 'block';
+    }
+  }
+
+  if (tabOtpBtn) tabOtpBtn.addEventListener('click', () => switchAuthTab('otp'));
+  if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => switchAuthTab('login'));
+  if (tabSignupBtn) tabSignupBtn.addEventListener('click', () => switchAuthTab('signup'));
+
+  // ==================== 2-STEP PHONE OTP LOGIC ====================
+  let activeOtpPhone = '';
+  let otpTimerInterval = null;
+
+  function startOtpCountdown(seconds = 60) {
+    const resendBtn = document.getElementById('btnResendOtp');
+    const countdownSpan = document.getElementById('otpCountdown');
+    if (!resendBtn || !countdownSpan) return;
+
+    clearInterval(otpTimerInterval);
+    let remaining = seconds;
+    resendBtn.disabled = true;
+    resendBtn.style.opacity = '0.6';
+    countdownSpan.textContent = remaining;
+
+    otpTimerInterval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(otpTimerInterval);
+        resendBtn.disabled = false;
+        resendBtn.style.opacity = '1';
+        resendBtn.innerHTML = 'Resend OTP Now';
+      } else {
+        countdownSpan.textContent = remaining;
+      }
+    }, 1000);
+  }
+
+  // Step 1: Send OTP
+  const btnSendOtp = document.getElementById('btnSendOtp');
+  if (btnSendOtp) {
+    btnSendOtp.addEventListener('click', async () => {
+      const phoneInput = document.getElementById('otpPhoneNumber');
+      const phone = phoneInput ? phoneInput.value.trim() : '';
+
+      if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
+        showToast('Please enter a valid 10-digit Indian mobile number (e.g. 9812345678).', 'danger');
+        if (phoneInput) phoneInput.focus();
+        return;
+      }
+
+      btnSendOtp.disabled = true;
+      btnSendOtp.innerHTML = '<span>Sending SMS...</span> ⏳';
+
+      try {
+        const res = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          activeOtpPhone = data.phoneNumber || phone;
+          const displayEl = document.getElementById('displayOtpPhone');
+          if (displayEl) displayEl.textContent = activeOtpPhone;
+
+          document.getElementById('otpStep1').style.display = 'none';
+          document.getElementById('otpStep2').style.display = 'block';
+
+          const hintEl = document.getElementById('otpDevHint');
+          const otpInput = document.getElementById('otpCodeInput');
+
+          if (data.devOtp) {
+            hintEl.style.display = 'block';
+            hintEl.innerHTML = `🔑 <strong>Dev OTP:</strong> <code>${data.devOtp}</code> (Valid for 5 mins)`;
+            if (otpInput) otpInput.value = data.devOtp;
+          } else {
+            hintEl.style.display = 'none';
+            if (otpInput) otpInput.value = '';
+          }
+
+          if (otpInput) otpInput.focus();
+          startOtpCountdown(60);
+          showToast(`6-Digit verification code dispatched to +91 ${activeOtpPhone}`, 'success');
+        } else {
+          showToast(data.error || 'Failed to dispatch OTP. Please check the number.', 'danger');
+        }
+      } catch (err) {
+        console.error('Send OTP network error:', err);
+        showToast('Failed to connect to server.', 'danger');
+      } finally {
+        btnSendOtp.disabled = false;
+        btnSendOtp.innerHTML = '<span>Send Verification Code</span> 🚀';
+      }
+    });
+  }
+
+  // Resend OTP
+  const btnResendOtp = document.getElementById('btnResendOtp');
+  if (btnResendOtp) {
+    btnResendOtp.addEventListener('click', () => {
+      if (activeOtpPhone) {
+        const pInput = document.getElementById('otpPhoneNumber');
+        if (pInput) pInput.value = activeOtpPhone;
+        document.getElementById('btnSendOtp')?.click();
+      }
+    });
+  }
+
+  // Change Phone Number
+  const btnChangeOtpPhone = document.getElementById('btnChangeOtpPhone');
+  if (btnChangeOtpPhone) {
+    btnChangeOtpPhone.addEventListener('click', () => {
+      document.getElementById('otpStep2').style.display = 'none';
+      document.getElementById('otpStep1').style.display = 'block';
+      const p = document.getElementById('otpPhoneNumber');
+      if (p) p.focus();
+    });
+  }
+
+  // Step 2: Verify OTP
+  const btnVerifyOtp = document.getElementById('btnVerifyOtp');
+  if (btnVerifyOtp) {
+    btnVerifyOtp.addEventListener('click', async () => {
+      const codeInput = document.getElementById('otpCodeInput');
+      const otp = codeInput ? codeInput.value.trim() : '';
+
+      if (!otp || otp.length !== 6) {
+        showToast('Please enter the 6-digit OTP code received on your phone.', 'danger');
+        if (codeInput) codeInput.focus();
+        return;
+      }
+
+      btnVerifyOtp.disabled = true;
+      btnVerifyOtp.innerHTML = '<span>Verifying OTP...</span> ⏳';
+
+      try {
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: activeOtpPhone, otp })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          // Close modal
+          const modal = document.getElementById('authModal');
+          if (modal) modal.classList.remove('active');
+
+          showToast('✅ Mobile verified! Logged in as Patient.', 'success');
+          await checkAuth();
+
+          // Reset OTP view for next time
+          document.getElementById('otpStep2').style.display = 'none';
+          document.getElementById('otpStep1').style.display = 'block';
+          if (document.getElementById('otpPhoneNumber')) document.getElementById('otpPhoneNumber').value = '';
+          if (document.getElementById('otpCodeInput')) document.getElementById('otpCodeInput').value = '';
+        } else {
+          showToast(data.error || 'Invalid OTP code. Please try again.', 'danger');
+        }
+      } catch (err) {
+        console.error('Verify OTP network error:', err);
+        showToast('Connection error verifying OTP.', 'danger');
+      } finally {
+        btnVerifyOtp.disabled = false;
+        btnVerifyOtp.innerHTML = '<span>Verify & Sign In</span> ✨';
+      }
     });
   }
 
@@ -996,6 +1192,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Close Buttons
     if (e.target.closest('.modal-close') || e.target.classList.contains('modal-backdrop')) {
       document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+    }
+
+    // Mobile Filter Drawer Toggle
+    if (e.target.closest('#btnMobileFilterToggle')) {
+      const sidebar = document.getElementById('filterSidebar');
+      if (sidebar) sidebar.classList.add('mobile-open');
+    }
+
+    // Mobile Filter Drawer Close & Apply
+    if (e.target.closest('#btnCloseSidebar') || e.target.closest('#btnApplyMobileFilter')) {
+      const sidebar = document.getElementById('filterSidebar');
+      if (sidebar) sidebar.classList.remove('mobile-open');
+      if (e.target.closest('#btnApplyMobileFilter')) {
+        document.getElementById('hospitalListContainer')?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
 
     // Toggle Favorite Action
@@ -1847,4 +2058,191 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// Core Matching Flow: Quick Affordable Hospital Matcher
+window.runQuickMatch = async function() {
+  const loc = document.getElementById('quickLocationInput')?.value?.trim() || '';
+  const need = document.getElementById('quickNeedInput')?.value?.trim() || '';
+  const budget = document.getElementById('quickBudgetInput')?.value || '';
+
+  const submitBtn = document.getElementById('btnQuickMatchSubmit');
+  const originalText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.innerHTML = 'Matching...';
+    submitBtn.disabled = true;
+  }
+
+  try {
+    const payload = {
+      location: loc,
+      medicalNeed: need,
+      budget: budget ? Number(budget) : null
+    };
+
+    const res = await fetch('/hospitals/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      state.hospitals = data.results || [];
+      // Reset local filters so backend matches are fully displayed
+      state.activeTreatmentFilter = 'all';
+      state.activeHospType = 'all';
+      state.emergencyOnly = false;
+      state.maxBudget = budget ? Number(budget) : 200000;
+
+      updateViews();
+      showToast(`Found ${state.hospitals.length} affordable hospitals for your search`, 'success');
+    } else {
+      showToast('Search request failed', 'danger');
+    }
+  } catch (err) {
+    console.error('Quick match error:', err);
+    showToast('Unable to connect to search server', 'danger');
+  } finally {
+    if (submitBtn) {
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    }
+  }
+};
+
+window.resetQuickMatch = function() {
+  if (document.getElementById('quickLocationInput')) document.getElementById('quickLocationInput').value = '';
+  if (document.getElementById('quickNeedInput')) document.getElementById('quickNeedInput').value = '';
+  if (document.getElementById('quickBudgetInput')) document.getElementById('quickBudgetInput').value = '';
+  state.maxBudget = 200000;
+  state.searchKeyword = '';
+  state.selectedState = 'all';
+  state.selectedDistrict = 'all';
+  fetchHospitals().then(() => updateViews());
+  showToast('Search filters reset', 'info');
+};
+
+// Standout Feature: Government Scheme Eligibility Checker
+window.checkSchemeEligibility = async function() {
+  const incomeRange = document.getElementById('eligIncomeSelect')?.value || '1.5L_to_3L';
+  const category = document.getElementById('eligCategorySelect')?.value || 'General';
+  const occupation = document.getElementById('eligOccupationSelect')?.value || 'General';
+
+  const btn = document.getElementById('btnCheckEligibility');
+  const resultsBox = document.getElementById('eligibilityResultsBox');
+  if (!resultsBox) return;
+
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = 'Checking...';
+    btn.disabled = true;
+  }
+
+  try {
+    const res = await fetch('/schemes/check-eligibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incomeRange, category, occupation })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      resultsBox.style.display = 'block';
+
+      if (!data.eligibleSchemes || data.eligibleSchemes.length === 0) {
+        resultsBox.innerHTML = `
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 1.25rem; border-radius: 8px; text-align: center;">
+            <h4 style="color: #475569; margin: 0 0 6px;">No Special Subsidized Scheme Found</h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0;">You may consider voluntary commercial health insurance or universal government OPD care.</p>
+          </div>
+        `;
+        return;
+      }
+
+      resultsBox.innerHTML = `
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h4 style="margin: 0; color: #166534; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+              <span>🎉</span> Great news! You qualify for ${data.totalEligible} Healthcare Schemes
+            </h4>
+            <span style="font-size: 0.78rem; background: #dcfce7; color: #15803d; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+              100% Cashless Medical Assurance
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 10px;">
+            ${data.eligibleSchemes.map(s => `
+              <div style="background: white; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px;">
+                  <strong style="color: #0f172a; font-size: 0.95rem;">${s.name}</strong>
+                  <span style="font-size: 0.72rem; background: #e0f2fe; color: #0284c7; font-weight: 700; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">
+                    ${s.badge}
+                  </span>
+                </div>
+                <div style="color: #059669; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px;">
+                  Coverage: ${s.coverage}
+                </div>
+                <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 8px; line-height: 1.4;">
+                  ${s.matchReason}
+                </div>
+                <ul style="font-size: 0.75rem; color: #334155; margin: 0 0 10px 16px; padding: 0;">
+                  ${s.benefits.map(b => `<li style="margin-bottom: 3px;">${b}</li>`).join('')}
+                </ul>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                  <button class="btn btn-outline" onclick="window.filterHospitalsByScheme('${s.id}')" style="padding: 4px 10px; font-size: 0.75rem; color: #15803d; border-color: #86efac; cursor: pointer;">
+                    🏥 Find Empanelled Hospitals
+                  </button>
+                  ${s.officialPortal ? `
+                    <a href="${s.officialPortal}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; text-decoration: none; color: #2563eb; border-color: #bfdbfe;">
+                      Apply / Portal ↗
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <p style="font-size: 0.76rem; color: #475569; margin: 12px 0 0; line-height: 1.4; border-top: 1px dashed #bbf7d0; padding-top: 8px;">
+            ℹ️ ${data.disclaimer}
+          </p>
+        </div>
+      `;
+      showToast('Eligibility calculated successfully!', 'success');
+    } else {
+      showToast('Failed to check eligibility', 'danger');
+    }
+  } catch (err) {
+    console.error('Error checking scheme eligibility:', err);
+    showToast('Unable to contact scheme eligibility server', 'danger');
+  } finally {
+    if (btn) {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  }
+};
+
+window.filterHospitalsByScheme = function(schemeId) {
+  // Jump to search tab and filter
+  const searchTab = document.querySelector('.patient-nav-tab[data-tab="search"]');
+  if (searchTab) searchTab.click();
+
+  const schemeSelect = document.getElementById('schemeFilterSelect');
+  if (schemeSelect) {
+    if (schemeId === 'pmjay' || schemeId === 'pmjay_seniors') schemeSelect.value = 'pmjay';
+    else if (schemeId === 'cghs') schemeSelect.value = 'cghs';
+    else if (schemeId === 'echs') schemeSelect.value = 'echs';
+    else schemeSelect.value = 'govt_only';
+
+    state.selectedSchemeFilter = schemeSelect.value;
+  }
+
+  fetchHospitals().then(() => {
+    updateViews();
+    showToast('Filtered empanelled hospitals for your scheme', 'info');
+    document.getElementById('hospitalListContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+};
+
+
 

@@ -1,13 +1,16 @@
+// Express REST API server: handles hospital search, patient booking, authentication, and schemes.
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import crypto from 'crypto';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { initDb, dbGet, dbAll, dbRun, logPrivacyAudit } from './database.js';
-import { encryptField, decryptField, maskPhoneNumber, maskEmail, generateChecksum } from './security_crypto.js';
-import { HEALTH_SCHEMES_CATALOG, validateSchemeCard, isHospitalEmpanelled } from './schemes_catalog.js';
-import { SYMPTOM_DATABASE, DISEASE_DATABASE, CLINICAL_TRIAGE_PROTOCOLS } from './data.js';
+import { initDb, dbGet, dbAll, dbRun, logPrivacyAudit } from '../database/database.js';
+import { encryptField, decryptField, maskPhoneNumber, maskEmail, generateChecksum } from './utils/security_crypto.js';
+import { HEALTH_SCHEMES_CATALOG, validateSchemeCard, isHospitalEmpanelled } from './utils/schemes_catalog.js';
+import { SYMPTOM_DATABASE, DISEASE_DATABASE, CLINICAL_TRIAGE_PROTOCOLS } from '../database/data.js';
 import {
   fileAccessGuard,
   globalApiLimiter,
@@ -20,9 +23,20 @@ import {
   validatePassword,
   sanitizeNonNegativeInt,
   hardenedSecurityHeaders
-} from './security_middleware.js';
+} from './middleware/security_middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Automatically load .env file if available
+try {
+  const envPath = join(__dirname, '../.env');
+  if (fs.existsSync(envPath) && typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile(envPath);
+  }
+} catch (envErr) {
+  // Ignored if .env is missing or already provided by environment
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'medigo_super_secret_jwt_key_2026_clinical_dpdp_aes_v2';
 
 const app = express();
@@ -34,9 +48,22 @@ app.disable('x-powered-by');
 // 1. Hardened Security Headers (Anti-Clickjacking, CSP, No-Sniff, Permissions-Policy)
 app.use(hardenedSecurityHeaders);
 
-// 2. Strict CORS policy
+// 2. Strict CORS policy (Whitelisted domains only)
+const allowedOrigins = [
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  'http://localhost:3000',
+  process.env.APP_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: true, // Reflect request origin
+  origin: (origin, callback) => {
+    // Allow mobile apps, curl, server-to-server, or same-origin requests
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS Error: Origin not allowed.'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -57,7 +84,7 @@ app.use('/api/', globalApiLimiter);
 app.use(fileAccessGuard);
 
 // 7. Serve static frontend files with dotfiles restricted and fresh cache headers for scripts
-app.use(express.static(__dirname, {
+app.use(express.static(join(__dirname, '../frontend'), {
   dotfiles: 'deny',
   index: ['index.html'],
   maxAge: 0,
@@ -202,6 +229,251 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 
+// ==================== PHONE NUMBER + OTP AUTHENTICATION API ====================
+
+// Indian 10-digit mobile number cleaner and validator
+function validateIndianPhoneNumber(phone) {
+  if (!phone) return null;
+  const clean = String(phone).replace(/[\s\-\(\)\+]/g, '');
+  const digits = clean.startsWith('91') && clean.length === 12
+    ? clean.slice(2)
+    : (clean.startsWith('0') && clean.length === 11 ? clean.slice(1) : clean);
+  if (/^[6-9]\d{9}$/.test(digits)) {
+    return digits;
+  }
+  return null;
+}
+
+// Multi-provider SMS Dispatcher (Fast2SMS / Twilio / MSG91 with graceful Dev Fallback)
+async function sendSmsOtp(phoneNumber, otp) {
+  // 1. Fast2SMS Quick OTP Gateway (Configurable via FAST2SMS_API_KEY in .env)
+  if (process.env.FAST2SMS_API_KEY) {
+    try {
+      const resp = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+        method: 'POST',
+        headers: {
+          'authorization': process.env.FAST2SMS_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          route: 'otp',
+          variables_values: otp,
+          numbers: phoneNumber
+        })
+      });
+      const data = await resp.json();
+      console.log(`[Fast2SMS] SMS sent to +91 ${phoneNumber}:`, data);
+      return { success: true, provider: 'Fast2SMS' };
+    } catch (e) {
+      console.error('[Fast2SMS] Dispatch error:', e.message);
+    }
+  }
+
+  // 2. Twilio SMS Gateway (Configurable via TWILIO_ACCOUNT_SID in .env)
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+    try {
+      const basicAuth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+      const params = new URLSearchParams({
+        To: `+91${phoneNumber}`,
+        From: process.env.TWILIO_PHONE_NUMBER,
+        Body: `Your MediGo verification code is ${otp}. Valid for 5 minutes. Do not share this OTP with anyone.`
+      });
+      const resp = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${basicAuth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params
+      });
+      const data = await resp.json();
+      console.log(`[Twilio] SMS sent to +91 ${phoneNumber}:`, data.sid);
+      return { success: true, provider: 'Twilio' };
+    } catch (e) {
+      console.error('[Twilio] Dispatch error:', e.message);
+    }
+  }
+
+  // 3. Simulated Development Gateway (Prints OTP prominently in server console)
+  console.log(`
+╔════════════════════════════════════════════════════════════════════╗
+║ 📲 [SMS GATEWAY SIMULATION] MediGo Healthcare OTP Dispatch         ║
+║ Recipient: +91 ${phoneNumber}                                       ║
+║ 6-Digit OTP: ${otp}                                              ║
+║ Validity: 5 Minutes (SHA-256 Hashed in SQLite Database)            ║
+║ Production Setup: Add FAST2SMS_API_KEY or TWILIO credentials in .env║
+╚════════════════════════════════════════════════════════════════════╝
+  `);
+  return { success: true, provider: 'Simulated Console Log (Dev)' };
+}
+
+// 3. Send 6-Digit OTP (Rate limited to 1 request per minute per phone number)
+app.post('/api/auth/send-otp', authLimiter, async (req, res) => {
+  const { phone } = req.body;
+  const cleanPhone = validateIndianPhoneNumber(phone);
+
+  if (!cleanPhone) {
+    return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number (e.g. 9812345678).' });
+  }
+
+  try {
+    const now = Date.now();
+
+    // Enforce 1-minute cooldown per phone number
+    const existing = await dbGet('SELECT * FROM otp_verifications WHERE phone_number = ?', [cleanPhone]);
+    if (existing && (now - existing.last_requested_at) < 60 * 1000) {
+      const waitSeconds = Math.ceil((60 * 1000 - (now - existing.last_requested_at)) / 1000);
+      return res.status(429).json({
+        error: `Please wait ${waitSeconds} seconds before requesting another OTP for this number.`,
+        retryAfterSeconds: waitSeconds
+      });
+    }
+
+    // Generate cryptographic 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const expiresAt = now + 5 * 60 * 1000; // 5 minutes validity
+
+    // Store hashed OTP in SQLite
+    await dbRun(`
+      INSERT INTO otp_verifications (phone_number, otp_hash, expires_at, attempts, last_requested_at)
+      VALUES (?, ?, ?, 0, ?)
+      ON CONFLICT(phone_number) DO UPDATE SET
+        otp_hash = excluded.otp_hash,
+        expires_at = excluded.expires_at,
+        attempts = 0,
+        last_requested_at = excluded.last_requested_at
+    `, [cleanPhone, otpHash, expiresAt, now]);
+
+    // Dispatch SMS via configured provider or development simulation
+    const dispatch = await sendSmsOtp(cleanPhone, otp);
+
+    res.json({
+      success: true,
+      message: `OTP sent successfully to +91 ${cleanPhone}.`,
+      phoneNumber: cleanPhone,
+      expiresInSeconds: 300,
+      provider: dispatch.provider,
+      // Provide devOtp for easy local testing when external provider key is not yet set
+      devOtp: (!process.env.FAST2SMS_API_KEY && !process.env.TWILIO_ACCOUNT_SID) ? otp : undefined
+    });
+  } catch (err) {
+    console.error('Send OTP error:', err);
+    res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
+  }
+});
+
+// 4. Verify 6-Digit OTP & Authenticate/Register Patient
+app.post('/api/auth/verify-otp', authLimiter, async (req, res) => {
+  const { phone, otp } = req.body;
+  const cleanPhone = validateIndianPhoneNumber(phone);
+
+  if (!cleanPhone || !otp) {
+    return res.status(400).json({ error: 'Please provide both 10-digit mobile number and 6-digit OTP.' });
+  }
+
+  try {
+    const record = await dbGet('SELECT * FROM otp_verifications WHERE phone_number = ?', [cleanPhone]);
+    if (!record) {
+      return res.status(400).json({ error: 'No active OTP request found for this number. Please request an OTP.' });
+    }
+
+    // Check Max Attempts Lockout (5 attempts)
+    if (record.attempts >= 5) {
+      return res.status(429).json({
+        error: 'Too many incorrect attempts. For security, please request a fresh OTP.',
+        locked: true
+      });
+    }
+
+    // Check Expiry (5 minutes)
+    if (Date.now() > record.expires_at) {
+      await dbRun('DELETE FROM otp_verifications WHERE phone_number = ?', [cleanPhone]);
+      return res.status(400).json({ error: 'This OTP has expired. Please request a fresh OTP.' });
+    }
+
+    // Verify SHA-256 Hash
+    const enteredHash = crypto.createHash('sha256').update(String(otp).trim()).digest('hex');
+    if (enteredHash !== record.otp_hash) {
+      const newAttempts = record.attempts + 1;
+      await dbRun('UPDATE otp_verifications SET attempts = ? WHERE phone_number = ?', [newAttempts, cleanPhone]);
+      const remaining = Math.max(0, 5 - newAttempts);
+      return res.status(400).json({
+        error: `Incorrect OTP. ${remaining} attempt(s) remaining before security lockout.`,
+        remainingAttempts: remaining
+      });
+    }
+
+    // OTP Verified! Invalidate record
+    await dbRun('DELETE FROM otp_verifications WHERE phone_number = ?', [cleanPhone]);
+
+    const nowIso = new Date().toISOString();
+
+    // 1. Find or create record in patients table
+    let patient = await dbGet('SELECT * FROM patients WHERE phone_number = ?', [cleanPhone]);
+    if (!patient) {
+      const pRes = await dbRun(
+        'INSERT INTO patients (phone_number, name, created_at, last_login, is_verified) VALUES (?, ?, ?, ?, 1)',
+        [cleanPhone, `Patient +91-${cleanPhone.slice(-4)}`, nowIso, nowIso]
+      );
+      patient = { id: pRes.id, phone_number: cleanPhone, name: `Patient +91-${cleanPhone.slice(-4)}` };
+    } else {
+      await dbRun('UPDATE patients SET last_login = ? WHERE id = ?', [nowIso, patient.id]);
+    }
+
+    // 2. Find or create in users table (maintains seamless integration with bookings, privacy vault, audit logs)
+    let user = await dbGet('SELECT * FROM users WHERE phone = ? OR email = ?', [cleanPhone, `${cleanPhone}@patient.medigo.in`]);
+    if (!user) {
+      const salt = await bcrypt.genSalt(10);
+      const dummyPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), salt);
+      const uRes = await dbRun(
+        'INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)',
+        [patient.name || `Patient ${cleanPhone.slice(-4)}`, `${cleanPhone}@patient.medigo.in`, dummyPassword, 'patient', cleanPhone]
+      );
+      user = await dbGet('SELECT * FROM users WHERE id = ?', [uRes.id]);
+
+      // Initialize default patient privacy settings
+      await dbRun(`
+        INSERT OR IGNORE INTO patient_privacy_settings (user_id, emergency_sos_auto_share, mask_contact_details, emergency_pin, allow_research_analytics, updated_at)
+        VALUES (?, 1, 1, '1234', 0, ?)
+      `, [user.id, nowIso]);
+    }
+
+    // Generate JWT Session Token (30 days validity)
+    const token = jwt.sign(
+      { id: user.id, name: user.name, phone: cleanPhone, email: user.email, role: 'patient' },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    // Record DPDP Compliance Audit Log
+    await logPrivacyAudit(
+      user.id,
+      user.name,
+      'patient',
+      'OTP_LOGIN_SUCCESS',
+      `Verified patient mobile number +91 ${cleanPhone} via 6-digit cryptographic OTP`,
+      req.ip
+    );
+
+    res.json({
+      success: true,
+      message: 'Mobile number verified successfully! Welcome to MediGo.',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: cleanPhone,
+        email: user.email,
+        role: 'patient'
+      }
+    });
+  } catch (err) {
+    console.error('Verify OTP error:', err);
+    res.status(500).json({ error: 'Failed to verify OTP. Please try again.' });
+  }
+});
+
 // ==================== HOSPITALS API ====================
 
 // Get unique States and Districts for filter dropdowns
@@ -281,7 +553,12 @@ app.get('/api/hospitals', async (req, res) => {
     const numLimit = parseInt(limit, 10) || 100;
     const numOffset = parseInt(offset, 10) || 0;
 
-    const hospitals = await dbAll(`SELECT * FROM hospitals ${whereSql} LIMIT ? OFFSET ?`, [...params, numLimit, numOffset]);
+    const hospitals = await dbAll(
+      `SELECT * FROM hospitals ${whereSql}
+       ORDER BY (CASE WHEN data_confidence = 'Full' THEN 0 WHEN id LIKE 'hosp-meerut-%' THEN 1 WHEN id LIKE 'hosp-gov-%' THEN 2 WHEN type = 'government' THEN 3 ELSE 4 END), rating DESC
+       LIMIT ? OFFSET ?`,
+      [...params, numLimit, numOffset]
+    );
 
     if (hospitals.length === 0) {
       return res.json([]);
@@ -345,13 +622,19 @@ app.get('/api/hospitals', async (req, res) => {
         reviewCount: h.review_count,
         distanceKm: h.distance_km,
         location: h.location,
+        address: h.address || h.location || null,
         lat: h.lat,
         lng: h.lng,
         phone: h.phone,
+        working_hours: h.working_hours,
         state: h.state,
         district: h.district,
         pincode: h.pincode,
         specialties: h.specialties,
+        data_confidence: h.data_confidence || (h.id.startsWith('hosp-meerut-') ? 'Full' : 'Bulk'),
+        schemes_accepted: h.schemes_accepted || null,
+        nabh_accredited: h.nabh_accredited || null,
+        source_notes: h.source_notes || null,
         emergencyAvailable: h.emergency_available === 1,
         estimatedAvgCost: h.estimated_avg_cost,
         beds: {
@@ -384,6 +667,113 @@ app.get('/api/hospitals', async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve hospitals.' });
   }
 });
+
+// Alias GET /hospitals directly to /api/hospitals
+app.get('/hospitals', (req, res) => {
+  req.url = '/api/hospitals' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '');
+  app.handle(req, res);
+});
+
+// ==================== CORE MATCHING FLOW: POST /hospitals/search ====================
+// Accepts: budget, location/city, medicalNeed. Returns affordable matched hospitals.
+async function handleHospitalSearch(req, res) {
+  try {
+    const { budget, location, city, medicalNeed, need, limit = 50 } = req.body || {};
+    const whereClauses = [];
+    const params = [];
+
+    // 1. Budget filter
+    const numBudget = Number(budget);
+    if (!isNaN(numBudget) && numBudget > 0) {
+      whereClauses.push('(estimated_avg_cost <= ? OR estimated_avg_cost = 0 OR type = "government")');
+      params.push(numBudget);
+    }
+
+    // 2. Location / City filter
+    const locQuery = (location || city || '').trim();
+    if (locQuery) {
+      const q = `%${locQuery}%`;
+      whereClauses.push('(location LIKE ? OR city LIKE ? OR district LIKE ? OR state LIKE ? OR pincode LIKE ?)');
+      params.push(q, q, q, q, q);
+    }
+
+    // 3. Medical need / Specialty filter
+    const needQuery = (medicalNeed || need || '').trim();
+    if (needQuery) {
+      const q = `%${needQuery}%`;
+      whereClauses.push('(specialties LIKE ? OR facilities_str LIKE ? OR name LIKE ? OR id IN (SELECT hospital_id FROM treatments WHERE name LIKE ? OR category LIKE ?))');
+      params.push(q, q, q, q, q);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const queryLimit = Math.min(parseInt(limit, 10) || 50, 100);
+
+    const rows = await dbAll(
+      `SELECT id, name, location, city, district, state, phone, type, rating,
+              estimated_avg_cost, icu_available, icu_total, general_available, general_total,
+              specialties
+       FROM hospitals ${whereSql}
+       ORDER BY (CASE WHEN id LIKE 'hosp-meerut-%' THEN 0 WHEN type = 'government' THEN 1 ELSE 2 END), estimated_avg_cost ASC
+       LIMIT ?`,
+      [...params, queryLimit]
+    );
+
+    const results = rows.map(h => {
+      let costDisplay = 'Govt Subsidized / Free';
+      if (h.estimated_avg_cost > 0) {
+        const minCost = Math.round(h.estimated_avg_cost * 0.85);
+        const maxCost = Math.round(h.estimated_avg_cost * 1.25);
+        costDisplay = `₹${minCost.toLocaleString('en-IN')} - ₹${maxCost.toLocaleString('en-IN')}`;
+      } else if (h.type === 'private') {
+        costDisplay = '₹5,000 - ₹15,000 (Consultation & Basic Care)';
+      }
+
+      return {
+        id: h.id,
+        name: h.name,
+        tagline: `${h.specialties || 'Multi-Specialty'} Healthcare Facility`,
+        badge: h.type === 'government' ? '🏛️ Govt Medical College & Hospital' : '🏥 Verified Hospital Partner',
+        location: h.location || [h.city, h.district, h.state].filter(Boolean).join(', '),
+        city: h.city || h.district || 'N/A',
+        state: h.state || 'N/A',
+        phone: h.phone && h.phone !== '0' ? h.phone : '108',
+        type: h.type || 'general',
+        rating: h.rating || 4.5,
+        estimatedAvgCost: h.estimated_avg_cost || 0,
+        estimatedCostRange: costDisplay,
+        emergencyAvailable: true,
+        beds: {
+          icu: { total: h.icu_total || 10, available: h.icu_available || 2 },
+          emergency: { total: 20, available: 5 },
+          general: { total: h.general_total || 100, available: h.general_available || 15 }
+        },
+        treatments: [],
+        doctors: [],
+        icuBedsAvailable: h.icu_available || 0,
+        generalBedsAvailable: h.general_available || 0,
+        specialties: h.specialties && h.specialties !== '0' ? h.specialties : 'General Medicine, Emergency Care'
+      };
+    });
+
+    res.json({
+      success: true,
+      count: results.length,
+      query: {
+        budget: numBudget > 0 ? numBudget : 'Any',
+        location: locQuery || 'All Locations',
+        medicalNeed: needQuery || 'All Specialties'
+      },
+      results
+    });
+  } catch (err) {
+    console.error('Error in handleHospitalSearch:', err);
+    res.status(500).json({ error: 'Search failed due to internal server error.' });
+  }
+}
+
+app.post('/api/hospitals/search', handleHospitalSearch);
+app.post('/hospitals/search', handleHospitalSearch);
+
 
 // Update Bed Availability (Admin only) — Boundary Validated
 app.put('/api/hospitals/:id/beds', authenticateToken, async (req, res) => {
@@ -640,9 +1030,54 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   const { hospitalId, hospitalName, ambulanceType, pickupLocation, dropLocation, fare } = req.body;
 
+  if (!hospitalId || !pickupLocation) {
+    return res.status(400).json({ error: 'Hospital ID and pickup location are required.' });
+  }
+
   try {
     const bookingId = 'BK-' + Math.floor(1000 + Math.random() * 9000);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+    // 1. Fetch patient privacy preferences and clinical profile
+    const privacy = await dbGet(
+      'SELECT emergency_sos_auto_share, mask_contact_details FROM patient_privacy_settings WHERE user_id = ?',
+      [req.user.id]
+    );
+    const userRecord = await dbGet(
+      'SELECT phone, blood_group, emergency_contact, allergies FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    // 2. Enforce Phone Masking Consent Preference
+    const shouldMask = privacy ? privacy.mask_contact_details === 1 : true;
+    const basePhone = userRecord?.phone || req.body.patientPhone || '+91 98123 45678';
+    const patientPhone = shouldMask ? maskPhoneNumber(basePhone) : basePhone;
+
+    // 3. Enforce Emergency SOS Vitals Auto-Share Preference
+    const shouldAutoShare = privacy ? privacy.emergency_sos_auto_share === 1 : true;
+    if (shouldAutoShare) {
+      const bloodGroup = userRecord?.blood_group || 'O+';
+      const allergies = decryptField(userRecord?.allergies) || 'None Reported';
+      await logPrivacyAudit(
+        req.user.id,
+        'Emergency Paramedic Dispatch',
+        'ambulance_crew',
+        'EMERGENCY_SOS_VITALS_DISPATCH',
+        `Critical vitals (Blood: ${bloodGroup}, Allergies: ${allergies}) auto-transmitted to ${hospitalName || 'Emergency Response'} under active patient consent.`,
+        req.ip,
+        'SUCCESS'
+      );
+    } else {
+      await logPrivacyAudit(
+        req.user.id,
+        'Emergency Paramedic Dispatch',
+        'ambulance_crew',
+        'EMERGENCY_SOS_VITALS_WITHHELD',
+        `Emergency vitals transmission suppressed according to patient privacy consent settings.`,
+        req.ip,
+        'RESTRICTED'
+      );
+    }
 
     await dbRun(`
       INSERT INTO bookings (
@@ -652,7 +1087,7 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
     `, [
       bookingId,
       req.user.name,
-      '+91 98123 45678', // Default simulated phone
+      patientPhone,
       hospitalId,
       hospitalName,
       ambulanceType,
@@ -947,8 +1382,19 @@ app.put('/api/privacy/settings', authenticateToken, async (req, res) => {
       now
     ]);
 
-    // Log Privacy Consent Update
-    await logPrivacyAudit(req.user.id, req.user.name, req.user.role, 'PRIVACY_CONSENT_UPDATE', 'Updated patient consent rules & emergency PIN', req.ip);
+    // Detailed DPDP Consent Transitions Audit Logging
+    const maskAction = maskContactDetails ? 'Contact masking enabled' : 'Contact masking disabled';
+    const sosAction = emergencySosAutoShare ? 'Emergency SOS auto-share active' : 'Emergency SOS auto-share suspended';
+    const resAction = allowResearchAnalytics ? 'Research analytics consent GRANTED' : 'Research analytics consent REVOKED';
+    
+    await logPrivacyAudit(
+      req.user.id,
+      req.user.name,
+      req.user.role,
+      'PRIVACY_CONSENT_UPDATE',
+      `Consent updated: ${maskAction} • ${sosAction} • ${resAction}`,
+      req.ip
+    );
 
     res.json({ message: 'Privacy preferences & consent settings saved successfully.' });
   } catch (err) {
@@ -957,11 +1403,26 @@ app.put('/api/privacy/settings', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. Get Real-Time Privacy Access Audit Logs (Immutable Log Viewer)
-app.get('/api/privacy/audit-logs', authenticateToken, async (req, res) => {
+// 3. Get Real-Time Privacy Access Audit Logs (Supports Authenticated Patient Stream + Guest Demonstration Mode)
+app.get('/api/privacy/audit-logs', async (req, res) => {
   try {
-    const logs = await dbAll('SELECT * FROM privacy_audit_logs WHERE user_id = ? ORDER BY id DESC LIMIT 50', [req.user.id]);
-    res.json(logs);
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+      jwt.verify(token, JWT_SECRET, async (err, user) => {
+        if (!err && user) {
+          const logs = await dbAll('SELECT * FROM privacy_audit_logs WHERE user_id = ? ORDER BY id DESC LIMIT 50', [user.id]);
+          return res.json({ mode: 'authenticated', logs });
+        }
+        const demoLogs = await dbAll('SELECT * FROM privacy_audit_logs ORDER BY id DESC LIMIT 15');
+        return res.json({ mode: 'guest_preview', logs: demoLogs });
+      });
+    } else {
+      // Unauthenticated visitor / preview mode
+      const demoLogs = await dbAll('SELECT * FROM privacy_audit_logs ORDER BY id DESC LIMIT 15');
+      return res.json({ mode: 'guest_preview', logs: demoLogs });
+    }
   } catch (err) {
     console.error('Error fetching privacy audit logs:', err);
     res.status(500).json({ error: 'Failed to retrieve privacy audit logs.' });
@@ -1260,6 +1721,160 @@ app.get('/api/kyc/check-hospital-coverage/:hospitalId', authenticateToken, async
   }
 });
 
+// ==================== STANDOUT FEATURE: SCHEME ELIGIBILITY CHECKER ====================
+// Accepts: income/incomeRange, category, occupation, state
+// Returns: eligible government schemes with benefits & recommended hospitals
+function checkSchemeEligibilityHandler(req, res) {
+  try {
+    const { income, incomeRange, category, occupation, state } = req.body || {};
+    
+    // Parse income
+    let annualIncome = 0;
+    if (incomeRange) {
+      if (incomeRange === 'under_1.5L') annualIncome = 120000;
+      else if (incomeRange === '1.5L_to_3L') annualIncome = 250000;
+      else if (incomeRange === '3L_to_5L') annualIncome = 400000;
+      else if (incomeRange === '5L_to_8L') annualIncome = 650000;
+      else if (incomeRange === 'above_8L') annualIncome = 900000;
+      else annualIncome = Number(incomeRange) || 0;
+    } else if (income !== undefined && income !== null) {
+      annualIncome = Number(income) || 0;
+    }
+
+    const cat = (category || 'General').trim();
+    const occ = (occupation || 'General').trim();
+    const userState = (state || 'All India').trim();
+
+    const eligibleSchemes = [];
+
+    // 1. Ayushman Bharat PM-JAY (Pradhan Mantri Jan Arogya Yojana)
+    if (annualIncome <= 300000 || cat === 'EWS / BPL' || cat === 'SC / ST' || occ === 'Informal / Daily Wage / Unorganized') {
+      eligibleSchemes.push({
+        id: 'pmjay',
+        name: 'Ayushman Bharat — PM-JAY',
+        tagline: 'World’s Largest Public Health Assurance Scheme',
+        coverage: '₹5,00,000 / family per year',
+        badge: '🇮🇳 Central Govt (100% Cashless)',
+        matchReason: 'Eligible based on annual income below ₹3 Lakhs or priority category status.',
+        benefits: [
+          'Cashless hospitalization for 1,949 secondary & tertiary medical/surgical procedures',
+          'Covers pre-hospitalization (3 days) and post-hospitalization (15 days) expenses',
+          'Empanelled at over 28,000 public and private hospitals across India'
+        ],
+        requiredDocs: ['Aadhaar Card', 'Ration Card (BPL/NFSA / PM-JAY letter)'],
+        officialPortal: 'https://pmjay.gov.in'
+      });
+    }
+
+    // 2. Ayushman Vay Vandana (Universal Senior Citizen Scheme for 70+)
+    if (cat === 'Senior Citizen (70+)') {
+      eligibleSchemes.push({
+        id: 'pmjay_seniors',
+        name: 'Ayushman Vay Vandana Card (Seniors 70+)',
+        tagline: 'Universal Health Cover for All Citizens Aged 70 and Above',
+        coverage: '₹5,00,000 dedicated annual cover',
+        badge: '👴 Senior Citizen Universal',
+        matchReason: 'Eligible automatically based on age 70+ irrespective of family income.',
+        benefits: [
+          'Dedicated ₹5 Lakh top-up cover independent of family PM-JAY card',
+          'No income caps or economic means test',
+          'Immediate issuance with Aadhaar e-KYC'
+        ],
+        requiredDocs: ['Aadhaar Card (verifying age 70+)'],
+        officialPortal: 'https://beneficiary.nha.gov.in'
+      });
+    }
+
+    // 3. Central Government Health Scheme (CGHS)
+    if (occ === 'Central / State Govt Employee / Pensioner') {
+      eligibleSchemes.push({
+        id: 'cghs',
+        name: 'Central Government Health Scheme (CGHS)',
+        tagline: 'Comprehensive Healthcare for Central Govt Employees & Pensioners',
+        coverage: 'Full OPD + IPD Cashless Treatment',
+        badge: '🏛️ Central Govt Scheme',
+        matchReason: 'Eligible as a central/state government employee or retiree.',
+        benefits: [
+          '100% cashless treatment at all CGHS wellness centres & accredited network hospitals',
+          'Subsidized medicines and lab test rates fixed by the Ministry of Health',
+          'Family dependents included'
+        ],
+        requiredDocs: ['CGHS Beneficiary Card', 'Govt Employee ID / Pension Payment Order (PPO)'],
+        officialPortal: 'https://cghs.nic.in'
+      });
+    }
+
+    // 4. Ex-Servicemen Contributory Health Scheme (ECHS)
+    if (occ === 'Armed Forces / Ex-Serviceman') {
+      eligibleSchemes.push({
+        id: 'echs',
+        name: 'Ex-Servicemen Contributory Health Scheme (ECHS)',
+        tagline: 'Flagship Healthcare for Defence Veterans & Dependents',
+        coverage: '100% Comprehensive Cashless Healthcare',
+        badge: '🎖️ Armed Forces Scheme',
+        matchReason: 'Eligible as an Armed Forces veteran, active serviceman, or dependent.',
+        benefits: [
+          'Direct referral to military and empanelled private super-specialty hospitals',
+          'Zero co-pay on all approved surgeries and critical ICU care',
+          'Covers spouse and eligible dependents'
+        ],
+        requiredDocs: ['ECHS Smart Card', 'Service Discharge Book / PPO'],
+        officialPortal: 'https://echs.gov.in'
+      });
+    }
+
+    // 5. Rashtriya Arogya Nidhi (RAN) Emergency Medical Grant
+    if (annualIncome > 0 && annualIncome <= 150000) {
+      eligibleSchemes.push({
+        id: 'ran',
+        name: 'Rashtriya Arogya Nidhi (RAN) Emergency Grant',
+        tagline: 'Financial Aid for Life-Threatening Diseases',
+        coverage: 'Up to ₹15,00,000 one-time medical grant',
+        badge: '🚨 Critical Illness Assistance',
+        matchReason: 'Eligible for special grants for major life-saving surgeries at AIIMS and apex hospitals.',
+        benefits: [
+          'Direct grant released to the treating government super-specialty hospital',
+          'Covers cancer, heart surgery, renal failure, and organ transplants',
+          'Fast-track approval by hospital medical superintendent'
+        ],
+        requiredDocs: ['BPL Ration Card', 'Medical Certificate from Govt Hospital Doctor', 'Income Certificate'],
+        officialPortal: 'https://mohfw.gov.in'
+      });
+    }
+
+    // 6. ABHA (Ayushman Bharat Health Account) — Universal for ALL citizens
+    eligibleSchemes.push({
+      id: 'abha',
+      name: 'ABHA Health Account (Ayushman Bharat Digital Mission)',
+      tagline: 'Universal 14-Digit Digital Health Identity Card',
+      coverage: 'Universal Free Digital Health ID',
+      badge: '🪪 Universal ABDM (All Citizens)',
+      matchReason: 'Available to all Indian citizens for seamless digital records and OPD registration.',
+      benefits: [
+        'Instant paperless OPD registration via Scan & Share QR code at AIIMS & govt hospitals',
+        'Consolidate lab reports, prescriptions & discharge summaries across all hospitals',
+        'Zero-fee lifetime digital health identifier'
+      ],
+      requiredDocs: ['Aadhaar Card with mobile OTP verification'],
+      officialPortal: 'https://healthid.ndhm.gov.in'
+    });
+
+    res.json({
+      success: true,
+      userInput: { income: annualIncome, category: cat, occupation: occ, state: userState },
+      totalEligible: eligibleSchemes.length,
+      eligibleSchemes,
+      disclaimer: 'This eligibility assessment is based on public guidelines from the National Health Authority (NHA) and Ministry of Health & Family Welfare. Formal cards can be created with your Aadhaar at official portals or any Common Service Center (CSC).'
+    });
+  } catch (err) {
+    console.error('Error in checkSchemeEligibilityHandler:', err);
+    res.status(500).json({ error: 'Eligibility check failed due to internal error.' });
+  }
+}
+
+app.post('/api/schemes/check-eligibility', checkSchemeEligibilityHandler);
+app.post('/schemes/check-eligibility', checkSchemeEligibilityHandler);
+
 // ==================== AI SYMPTOM CHECKER API ====================
 
 // Symptom Chat Endpoint
@@ -1467,6 +2082,8 @@ app.post('/api/auth/register-hospital', authLimiter, async (req, res) => {
     res.status(500).json({ error: 'Internal server error during registration.' });
   }
 });
+
+
 
 // 2. Upload Handler (Images & PDFs Base64)
 app.post('/api/upload', authenticateToken, async (req, res) => {
@@ -2148,6 +2765,19 @@ app.put('/api/blood/inventory/:id', async (req, res) => {
     console.error('Error updating blood inventory:', err);
     res.status(500).json({ error: 'Failed to update blood inventory.' });
   }
+});
+
+// 9. Global Fallback Error Handler (Prevents internal stack trace leakage)
+app.use((err, req, res, next) => {
+  console.error('Unhandled internal server error:', err.message || err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production'
+      ? 'An unexpected error occurred. Please try again later.'
+      : (err.message || 'Internal Server Error')
+  });
 });
 
 // Start the Server

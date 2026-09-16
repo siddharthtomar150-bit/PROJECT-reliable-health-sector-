@@ -1,4 +1,5 @@
 // Blood Bank, Emergency SOS & Voluntary Donor Network Module — MediGo Platform
+import { escapeHtml } from './patient.js';
 
 let bloodState = {
   inventory: [],
@@ -421,16 +422,6 @@ window.fulfillBloodRequest = async (id) => {
     console.error('Error fulfilling request:', err);
   }
 };
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 function showToast(msg, type = 'info') {
   if (window.showToast) window.showToast(msg, type);

@@ -1,6 +1,32 @@
+# Dependencies
 node_modules/
 .venv/
+venv/
+
+# Environment Variables & Secrets
+.env
+
+# Databases & Backups
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python artifacts
 __pycache__/
 *.pyc
-*.dp
+
+# OS & Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build & Distribution
+dist/
+build/
+
+# Local Utilities & Binaries
 cloudflared.exe

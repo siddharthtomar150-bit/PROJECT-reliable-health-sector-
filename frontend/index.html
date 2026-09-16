@@ -80,55 +80,52 @@
 
   <main class="main-wrapper">
 
-    <!-- Realistic Healthcare Hero Banner -->
+    <!-- Compact Healthcare Hero Banner -->
     <section class="healthcare-hero-banner">
-      <div class="hero-top-ticker">
-        <span class="ticker-live-pill"><span class="pulse-dot"></span> LIVE NETWORK</span>
-        <span><strong>30,273</strong> Verified Hospitals</span>
-        <span>•</span>
-        <span><strong>14,280+</strong> Active ICU Beds</span>
-        <span>•</span>
-        <span><strong>100%</strong> PM-JAY & CGHS Verified</span>
-        <span>•</span>
-        <span>Avg Emergency Dispatch: <strong>7.8 Mins</strong></span>
+      <div class="hero-top-row">
+        <div>
+          <h1 class="hero-title">Find Verified Hospitals, Live ICU Beds &amp; Emergency Care</h1>
+          <div class="hero-subline">
+            <span class="live-status-indicator"><span class="pulse-dot"></span> LIVE NETWORK</span>
+            <span><strong>30,273</strong> Verified Hospitals</span>
+            <span class="hero-sep">&bull;</span>
+            <span><strong>14,280+</strong> Active ICU Beds</span>
+            <span class="hero-sep">&bull;</span>
+            <span>PM-JAY &amp; CGHS Verified</span>
+            <span class="hero-sep">&bull;</span>
+            <span>Avg Dispatch: <strong>7.8 Mins</strong></span>
+          </div>
+        </div>
       </div>
 
-      <div class="hero-content">
-        <h1 class="hero-title">Find Verified Hospitals, Live ICU Beds & Emergency Care</h1>
-        <p class="hero-subtitle">
-          Search accredited medical colleges, multispecialty hospitals, and emergency trauma centers across India with real-time bed telemetry and instant 108 ALS dispatch.
-        </p>
-      </div>
-
-      <!-- Quick City & State Pills -->
-      <div class="hero-city-pills">
-        <span class="city-pill-label">Popular Hubs:</span>
+      <!-- Unified Horizontally Scrollable Hubs & Acuity Filter Strip -->
+      <div class="hero-unified-scroll-strip" tabindex="0" role="region" aria-label="Quick Hubs and Filters">
+        <span class="strip-label">Hubs:</span>
         <button class="city-pill active" data-state="all" data-district="all">All India</button>
         <button class="city-pill" data-state="Delhi" data-district="New Delhi">New Delhi</button>
-        <button class="city-pill" data-state="Uttar Pradesh" data-district="Meerut">Meerut (NCR)</button>
+        <button class="city-pill" data-state="Uttar Pradesh" data-district="Meerut">Meerut</button>
         <button class="city-pill" data-state="Haryana" data-district="Gurgaon">Gurugram</button>
         <button class="city-pill" data-state="Uttar Pradesh" data-district="Lucknow">Lucknow</button>
         <button class="city-pill" data-state="Maharashtra" data-district="Mumbai">Mumbai</button>
         <button class="city-pill" data-state="Karnataka" data-district="Bangalore">Bengaluru</button>
-      </div>
 
-      <!-- Rapid Clinical Acuity Filter Chips -->
-      <div class="hero-acuity-chips">
+        <span class="strip-divider">|</span>
+        <span class="strip-label">Filter:</span>
         <button class="acuity-chip" id="chipIcuOnly">
           <span class="dot-indicator red"></span>
-          ICU Beds Available Now
+          ICU Beds Available
         </button>
         <button class="acuity-chip" id="chipPmjayOnly">
           <span class="dot-indicator green"></span>
-          Ayushman PM-JAY Cashless
+          PM-JAY Cashless
         </button>
         <button class="acuity-chip" id="chipGovtOnly">
           <span class="dot-indicator blue"></span>
-          Govt Medical Colleges (AIIMS/Safdarjung)
+          Govt Hospitals
         </button>
         <button class="acuity-chip" id="chipNabhOnly">
           <span class="dot-indicator teal"></span>
-          NABH & JCI Accredited
+          NABH Accredited
         </button>
       </div>
     </section>
@@ -184,12 +181,15 @@
         <div class="grid-patient-main">
           
           <!-- Left Search & Filter Sidebar -->
-          <aside>
+          <aside class="filter-sidebar" id="filterSidebar">
             <div class="card-panel">
-              <h3 style="margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                Search &amp; Filters (30,000+ Hospitals)
-              </h3>
+              <div class="sidebar-header-row">
+                <h3 style="margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                  Search &amp; Filters
+                </h3>
+                <button type="button" class="btn-close-sidebar" id="btnCloseSidebar" aria-label="Close filters">✕</button>
+              </div>
 
               <div class="form-group">
                 <label for="searchInput">Search Keyword</label>
@@ -308,13 +308,22 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"></path></svg>
                 Compare Selected Matrix
               </button>
+              <button type="button" class="btn btn-primary btn-apply-mobile-filter" id="btnApplyMobileFilter" style="width: 100%; margin-top: 8px;">
+                Apply &amp; View Hospitals
+              </button>
             </div>
           </aside>
 
           <!-- Right Hospital Cards Feed -->
           <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-              <h3 id="searchCountBadge" style="font-size: 1.1rem; color: var(--text-main);">Hospitals Available</h3>
+            <div class="search-results-header-bar">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-outline mobile-filter-toggle-btn" id="btnMobileFilterToggle" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                  <span>Filters &amp; Search</span>
+                </button>
+                <h3 id="searchCountBadge" style="font-size: 1.1rem; color: var(--text-main); margin: 0;">Hospitals Available</h3>
+              </div>
               
               <!-- List / Map View Switcher & Favorites Filter -->
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -336,6 +345,55 @@
 
             <!-- All Hospitals Interactive Map Canvas -->
             <div id="allHospitalsMapCanvas" style="display: none; height: 480px; width: 100%; border-radius: 10px; border: 1px solid var(--light-border); margin-bottom: 1rem; z-index: 1;"></div>
+
+            <!-- Quick Affordable Hospital Matcher (Core Flow) -->
+            <div class="card-panel" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%); border: 1px solid #bbf7d0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.05rem; color: #166534; display: flex; align-items: center; gap: 6px;">
+                    🎯 Quick Affordable Hospital Matcher
+                  </h3>
+                  <p style="margin: 3px 0 0; font-size: 0.8rem; color: #4b5563;">
+                    Enter your budget, location, and medical need to find best-fit verified hospitals instantly.
+                  </p>
+                </div>
+                <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 0.75rem; padding: 4px 8px; border-radius: 9999px;">
+                  Real Data Matcher
+                </span>
+              </div>
+
+              <form id="quickMatchForm" onsubmit="event.preventDefault(); window.runQuickMatch();" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) auto; gap: 10px; align-items: flex-end;">
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">City / District</label>
+                  <input type="text" id="quickLocationInput" class="form-control" placeholder="e.g. Delhi, Meerut, Lucknow" style="padding: 8px 12px; font-size: 0.85rem;" />
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Medical Need</label>
+                  <input type="text" id="quickNeedInput" class="form-control" placeholder="e.g. Surgery, Heart, Eye, Maternity" style="padding: 8px 12px; font-size: 0.85rem;" />
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Max Budget (₹)</label>
+                  <input type="number" id="quickBudgetInput" class="form-control" placeholder="e.g. 50000" min="0" step="5000" style="padding: 8px 12px; font-size: 0.85rem;" />
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button type="submit" class="btn btn-primary" id="btnQuickMatchSubmit" style="padding: 8px 16px; font-size: 0.86rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                    🔍 Match Hospitals
+                  </button>
+                  <button type="button" class="btn btn-outline" id="btnQuickMatchReset" onclick="window.resetQuickMatch();" style="padding: 8px 12px; font-size: 0.86rem;">
+                    Reset
+                  </button>
+                </div>
+              </form>
+
+              <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #bbf7d0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span style="font-size: 0.78rem; color: #166534;">
+                  💡 Low income or family over 70? You may qualify for <strong>100% Free Govt Healthcare (PM-JAY up to ₹5L/yr)</strong>.
+                </span>
+                <button type="button" class="btn btn-outline" onclick="document.querySelector('.patient-nav-tab[data-tab=\'schemes\']').click();" style="padding: 4px 10px; font-size: 0.78rem; color: #15803d; border-color: #86efac; background: white; font-weight: 600; cursor: pointer;">
+                  💳 Check Scheme Eligibility →
+                </button>
+              </div>
+            </div>
 
             <div class="hospital-list" id="hospitalListContainer">
               <!-- Dynamically rendered via patient.js -->
@@ -943,6 +1001,67 @@
             </p>
           </div>
 
+          <!-- STANDOUT FEATURE: Government Scheme Eligibility Checker -->
+          <div class="card-panel" style="margin-bottom: 1.5rem; background: #ffffff; border: 2px solid #3b82f6; border-radius: var(--radius-lg); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <h3 style="margin: 0; font-size: 1.15rem; color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+                  <span>🔍</span> Government Health Scheme Eligibility Checker
+                </h3>
+                <p style="margin: 4px 0 0; font-size: 0.84rem; color: #64748b;">
+                  Find out in seconds which national and state health schemes you or your family qualify for (Free / Cashless care up to ₹5 Lakhs).
+                </p>
+              </div>
+              <span class="badge" style="background: #dbeafe; color: #1e40af; font-weight: 700; padding: 4px 10px; border-radius: 9999px; font-size: 0.78rem;">
+                PM-JAY • ABHA • CGHS • ECHS
+              </span>
+            </div>
+
+            <form id="schemeEligibilityForm" onsubmit="event.preventDefault(); window.checkSchemeEligibility();" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; align-items: flex-end;">
+              <div class="form-group">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Annual Family Income</label>
+                <select id="eligIncomeSelect" class="form-select" style="padding: 8px 10px; font-size: 0.86rem;">
+                  <option value="under_1.5L">Under ₹1.5 Lakhs / Year (BPL / Priority)</option>
+                  <option value="1.5L_to_3L" selected>₹1.5 Lakhs - ₹3 Lakhs / Year</option>
+                  <option value="3L_to_5L">₹3 Lakhs - ₹5 Lakhs / Year</option>
+                  <option value="5L_to_8L">₹5 Lakhs - ₹8 Lakhs / Year</option>
+                  <option value="above_8L">Above ₹8 Lakhs / Year</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Beneficiary Category</label>
+                <select id="eligCategorySelect" class="form-select" style="padding: 8px 10px; font-size: 0.86rem;">
+                  <option value="General">General Category</option>
+                  <option value="EWS / BPL">EWS / BPL Ration Card Holder</option>
+                  <option value="SC / ST">SC / ST Priority Household</option>
+                  <option value="OBC">OBC (Non-Creamy Layer)</option>
+                  <option value="Senior Citizen (70+)">Senior Citizen (Aged 70+)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: block;">Occupation / Employment</label>
+                <select id="eligOccupationSelect" class="form-select" style="padding: 8px 10px; font-size: 0.86rem;">
+                  <option value="Informal / Daily Wage / Unorganized">Informal / Daily Wage / Worker</option>
+                  <option value="Private / Self-Employed">Private Salaried / Self-Employed</option>
+                  <option value="Central / State Govt Employee / Pensioner">Central / State Govt Employee or Pensioner</option>
+                  <option value="Armed Forces / Ex-Serviceman">Armed Forces Veteran / Ex-Serviceman</option>
+                  <option value="Farmer / Artisan">Farmer / Agriculture / Artisan</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button type="submit" id="btnCheckEligibility" class="btn btn-primary" style="padding: 9px 18px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px; background: #2563eb; border-color: #2563eb;">
+                  <span>⚡</span> Check My Eligibility
+                </button>
+              </div>
+            </form>
+
+            <!-- Eligibility Results Display Container -->
+            <div id="eligibilityResultsBox" style="margin-top: 1.25rem; display: none;"></div>
+          </div>
+
           <!-- Digital Scheme Cards Grid -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
@@ -1244,21 +1363,64 @@
     </div>
   </div>
 
-  <!-- ==================== AUTH MODAL (Login / Register) ==================== -->
+  <!-- ==================== AUTH MODAL (Login / Register / Mobile OTP) ==================== -->
   <div class="modal-backdrop" id="authModal">
     <div class="modal-box" style="max-width: 440px;">
       <div class="modal-header">
-        <h3 style="font-size: 1.15rem; color: var(--slate-900);">Patient Access Portal</h3>
+        <h3 style="font-size: 1.15rem; color: var(--slate-900); display: flex; align-items: center; gap: 8px;">
+          <span>🏥</span> Patient Access Portal
+        </h3>
         <button class="modal-close" id="btnCloseAuthModal">&times;</button>
       </div>
       <div style="padding: 1.5rem;">
         <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--slate-200); padding-bottom: 6px;">
-          <button type="button" class="auth-tab active" id="tabLoginBtn" style="padding: 6px 16px; border: none; background: transparent; font-weight: 700; color: var(--primary); cursor: pointer; border-bottom: 2px solid var(--primary);">Sign In</button>
-          <button type="button" class="auth-tab" id="tabSignupBtn" style="padding: 6px 16px; border: none; background: transparent; font-weight: 600; color: var(--slate-500); cursor: pointer;">Register</button>
+          <button type="button" class="auth-tab active" id="tabOtpBtn" style="padding: 6px 14px; border: none; background: transparent; font-weight: 700; color: var(--primary); cursor: pointer; border-bottom: 2px solid var(--primary);">📲 Mobile OTP</button>
+          <button type="button" class="auth-tab" id="tabLoginBtn" style="padding: 6px 14px; border: none; background: transparent; font-weight: 600; color: var(--slate-500); cursor: pointer;">Email Login</button>
+          <button type="button" class="auth-tab" id="tabSignupBtn" style="padding: 6px 14px; border: none; background: transparent; font-weight: 600; color: var(--slate-500); cursor: pointer;">Register</button>
         </div>
 
-        <!-- Login Form -->
-        <form id="loginForm" class="auth-form active">
+        <!-- 2-Step Mobile OTP Form -->
+        <div id="otpAuthContainer" class="auth-form active">
+          <!-- Step 1: Input Mobile Number -->
+          <div id="otpStep1">
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label for="otpPhoneNumber" style="font-weight: 600; font-size: 0.88rem; color: var(--slate-800); margin-bottom: 6px; display: block;">Mobile Number</label>
+              <div style="display: flex; gap: 8px;">
+                <span style="display: inline-flex; align-items: center; background: #f1f5f9; padding: 0 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569; font-size: 0.9rem;">🇮🇳 +91</span>
+                <input type="tel" id="otpPhoneNumber" class="form-control" placeholder="9812345678" maxlength="10" required style="font-size: 1rem; letter-spacing: 1px; font-weight: 600; flex: 1;">
+              </div>
+              <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 5px;">Instant 6-digit verification code will be dispatched via SMS.</div>
+            </div>
+            <button type="button" id="btnSendOtp" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <span>Send Verification Code</span> 🚀
+            </button>
+          </div>
+
+          <!-- Step 2: Input 6-Digit OTP -->
+          <div id="otpStep2" style="display: none;">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 14px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.75rem; color: #166534; font-weight: 700;">Code Dispatched to:</div>
+                <div style="font-size: 0.92rem; color: #14532d; font-weight: 800; letter-spacing: 0.5px;">+91 <span id="displayOtpPhone"></span></div>
+              </div>
+              <button type="button" id="btnChangeOtpPhone" style="background: transparent; border: none; color: #0284c7; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Change</button>
+            </div>
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label for="otpCodeInput" style="font-weight: 600; font-size: 0.88rem; color: var(--slate-800); margin-bottom: 6px; display: block;">Enter 6-Digit OTP</label>
+              <input type="text" id="otpCodeInput" class="form-control" placeholder="••••••" maxlength="6" style="text-align: center; font-size: 1.35rem; letter-spacing: 6px; font-weight: 800; font-family: monospace;" required>
+              <div id="otpDevHint" style="display: none; margin-top: 6px; font-size: 0.78rem; background: #fffbeb; border: 1px solid #fde68a; padding: 6px 10px; border-radius: 6px; color: #b45309; font-weight: 600;"></div>
+            </div>
+            <button type="button" id="btnVerifyOtp" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
+              <span>Verify & Sign In</span> ✨
+            </button>
+            <div style="text-align: center; font-size: 0.8rem; color: var(--slate-500);">
+              Didn't receive SMS? <button type="button" id="btnResendOtp" style="background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; padding: 0;" disabled>Resend in <span id="otpCountdown">60</span>s</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email/Password Login Form -->
+        <form id="loginForm" class="auth-form" style="display: none;">
           <div class="form-group">
             <label for="loginEmail">Registered Email</label>
             <input type="email" id="loginEmail" name="email" class="form-control" placeholder="patient@medigo.com" required>
@@ -1268,7 +1430,7 @@
             <input type="password" id="loginPassword" name="password" class="form-control" placeholder="••••••••" required>
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-weight: 700;">
-            Sign In
+            Sign In with Password
           </button>
           <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--slate-500); background: var(--slate-50); padding: 8px; border-radius: 6px;">
             Demo Credentials: <code>patient@medigo.com</code> / <code>patient123</code>

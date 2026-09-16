@@ -2,10 +2,10 @@
   "name": "hospital-finder",
   "version": "1.0.0",
   "description": "Smart Hospital Finder with Backend & Database",
-  "main": "server.js",
+  "main": "backend/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node backend/server.js"
   },
   "dependencies": {
     "express": "^4.19.2",

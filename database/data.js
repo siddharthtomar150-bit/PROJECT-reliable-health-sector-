@@ -341,6 +341,138 @@ export const INITIAL_HOSPITALS = [
     ambulanceUnits: [
       { id: "amb-medanta", type: "Air-Conditioned ALS Intensive Unit", vehicleNo: "HR 26 DQ 1001", driver: "Karan Singh", phone: "+91 124 414 1108", ratePerKm: 55, paramedic: "EMT Sandeep Verma" }
     ]
+  },
+  {
+    id: "hosp-meerut-1",
+    name: "Anand Hospital",
+    tagline: "Premier Multi-Specialty Hospital & PM-JAY Cashless Network",
+    badge: "🏥 PM-JAY Empanelled Multi-Specialty",
+    type: "private",
+    rating: 4.8,
+    reviewCount: 1240,
+    distanceKm: 2.1,
+    location: "A-1, Damodar Colony, Garh Road, Near Medical College, Meerut - 250002",
+    lat: 28.9845,
+    lng: 77.7264,
+    phone: "0121-4014800",
+    state: "Uttar Pradesh",
+    district: "Meerut",
+    pincode: "250002",
+    emergencyAvailable: true,
+    estimatedAvgCost: 350,
+    cover_image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&auto=format&fit=crop&q=80",
+    accreditation: "NABH Accredited Multi-Specialty Hospital",
+    reg_number: "ANAND-MRT-250002",
+    pmjayEmpanelled: true,
+    cghsEmpanelled: true,
+    beds: {
+      icu: { total: 25, available: 6 },
+      emergency: { total: 30, available: 9 },
+      general: { total: 250, available: 42 }
+    },
+    opdWaitTimeMins: 15,
+    workingHours: "11:00 AM - 2:00 PM (Mon-Sat)",
+    treatments: [
+      { id: "t1-anand", name: "Emergency Trauma Resuscitation", category: "Emergency", cost: 2500, duration: "Daycare" },
+      { id: "t2-anand", name: "Cardiology & Cath Lab Angioplasty", category: "Cardiology", cost: 55000, duration: "Cashless PM-JAY" },
+      { id: "t3-anand", name: "Laparoscopic Surgery", category: "General Surgery", cost: 32000, duration: "2 Days" }
+    ],
+    doctors: [
+      { name: "Dr. Arvind Saxena", spec: "Chief of Emergency Medicine", exp: "22 yrs", status: "In Casualty" },
+      { name: "Dr. Sunita Sharma", spec: "Senior Cardiologist", exp: "18 yrs", status: "Available in OPD" }
+    ],
+    facilities: ["24x7 Emergency Casualty", "PM-JAY Helpdesk", "Cath Lab", "ICU Ventilator", "Pharmacy"],
+    ambulanceUnits: [
+      { id: "amb-anand-1", type: "ALS Intensive Unit", vehicleNo: "UP 15 BT 1008", driver: "Sunil Kumar", phone: "0121-4014800", ratePerKm: 30 }
+    ]
+  },
+  {
+    id: "hosp-meerut-2",
+    name: "P.L. Sharma District Hospital",
+    tagline: "Apex District Government Hospital of Meerut",
+    badge: "🏛️ UP State Govt Hospital (100% Free PM-JAY)",
+    type: "government",
+    rating: 4.5,
+    reviewCount: 2150,
+    distanceKm: 1.5,
+    location: "Civil Lines, Near Commissioner Office, Meerut - 250001",
+    lat: 28.9950,
+    lng: 77.7120,
+    phone: "9897496004",
+    state: "Uttar Pradesh",
+    district: "Meerut",
+    pincode: "250001",
+    emergencyAvailable: true,
+    estimatedAvgCost: 0,
+    cover_image: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=800&auto=format&fit=crop&q=80",
+    accreditation: "Government District Apex Hospital",
+    reg_number: "PLS-MRT-GOV-01",
+    pmjayEmpanelled: true,
+    cghsEmpanelled: true,
+    beds: {
+      icu: { total: 30, available: 8 },
+      emergency: { total: 50, available: 14 },
+      general: { total: 500, available: 65 }
+    },
+    opdWaitTimeMins: 25,
+    workingHours: "8:00 AM - 2:00 PM (OPD)",
+    treatments: [
+      { id: "t1-pls", name: "100% Free OPD & Essential Medicines", category: "General", cost: 0, duration: "Free OPD" },
+      { id: "t2-pls", name: "Trauma Resuscitation & Casualty", category: "Emergency", cost: 0, duration: "24x7 Free" },
+      { id: "t3-pls", name: "General & Orthopedic Surgery", category: "Surgery", cost: 500, duration: "Free under PM-JAY" }
+    ],
+    doctors: [
+      { name: "Dr. K. P. Singh", spec: "Chief Medical Superintendent", exp: "26 yrs", status: "In OPD" },
+      { name: "Dr. Rakesh Gupta", spec: "Senior Consultant Orthopedics", exp: "20 yrs", status: "Available" }
+    ],
+    facilities: ["24x7 Trauma Casualty", "PM Jan Aushadhi Pharmacy", "Free Blood Bank", "Ayushman PM-JAY Kiosk"],
+    ambulanceUnits: [
+      { id: "amb-pls-108", type: "Govt 108 Emergency Ambulance", vehicleNo: "UP 15 G 0108", driver: "Ramesh Chand", phone: "108", ratePerKm: 0 }
+    ]
+  },
+  {
+    id: "hosp-meerut-4",
+    name: "Svbp Hospital Medical College",
+    tagline: "Sardar Vallabhbhai Patel Hospital & LLRM Government Medical College",
+    badge: "🏛️ Government Teaching Medical College",
+    type: "government",
+    rating: 4.7,
+    reviewCount: 3400,
+    distanceKm: 2.8,
+    location: "Garh Road, Panchli Khurd, Meerut - 250004",
+    lat: 28.9845,
+    lng: 77.7064,
+    phone: "+91 121 276 0058",
+    state: "Uttar Pradesh",
+    district: "Meerut",
+    pincode: "250004",
+    emergencyAvailable: true,
+    estimatedAvgCost: 0,
+    cover_image: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=800&auto=format&fit=crop&q=80",
+    accreditation: "MCI / NMC Recognized Tertiary Apex Medical College",
+    reg_number: "SVBP-LLRM-MRT-01",
+    pmjayEmpanelled: true,
+    cghsEmpanelled: true,
+    beds: {
+      icu: { total: 60, available: 12 },
+      emergency: { total: 80, available: 22 },
+      general: { total: 1100, available: 145 }
+    },
+    opdWaitTimeMins: 30,
+    workingHours: "8:30 AM - 2:00 PM (OPD)",
+    treatments: [
+      { id: "t1-svbp", name: "Tertiary Emergency Care & Code Blue", category: "Emergency", cost: 0, duration: "Free Casualty" },
+      { id: "t2-svbp", name: "Cardiac Angioplasty & Stenting", category: "Cardiology", cost: 45000, duration: "Cashless PM-JAY" },
+      { id: "t3-svbp", name: "Neurosurgery & Spine Trauma", category: "Neurosurgery", cost: 2000, duration: "Subsidized Govt" }
+    ],
+    doctors: [
+      { name: "Dr. R. C. Gupta", spec: "Principal & Senior Physician", exp: "30 yrs", status: "In OPD" },
+      { name: "Dr. Subhash Chand", spec: "Head of General Surgery", exp: "24 yrs", status: "In Surgery" }
+    ],
+    facilities: ["Level 1 Trauma Center", "24x7 PM-JAY Ayushman Mitra Counter", "Advanced MRI / CT 128 Slice", "Blood Bank & Component Separation"],
+    ambulanceUnits: [
+      { id: "amb-svbp-108", type: "State ALS Life Support Fleet", vehicleNo: "UP 15 G 4455", driver: "Devendra Pal", phone: "108", ratePerKm: 0 }
+    ]
   }
 ];
 

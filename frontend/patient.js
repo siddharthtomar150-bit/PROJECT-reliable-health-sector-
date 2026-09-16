@@ -58,11 +58,17 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
     const isCompared = compareList.some(item => item.id === h.id);
     const isFavorite = (favoritesList || []).includes(h.id);
     const isGovt = h.type === 'government';
-    const isPmjay = h.pmjayEmpanelled || isGovt || (h.badge && h.badge.includes('Govt'));
-    const isCghs = h.cghsEmpanelled || isGovt || (h.name && (h.name.includes('AIIMS') || h.name.includes('Safdarjung') || h.name.includes('RML') || h.name.includes('Max') || h.name.includes('Fortis') || h.name.includes('Medanta')));
-    const queryTarget = encodeURIComponent(`${h.name}, ${h.location || ''}`);
+    const isFullConfidence = h.data_confidence === 'Full';
+    const isNameOnly = h.data_confidence === 'Name-only-verify';
+
+    // Step 3.1: Only show PM-JAY / Govt Scheme badge when data_confidence = "Full" AND schemes_accepted is filled
+    const hasPmjayScheme = (h.schemes_accepted && h.schemes_accepted.toUpperCase().includes('PM-JAY')) || (isGovt && isFullConfidence);
+    const isPmjay = isFullConfidence && hasPmjayScheme;
+    const isNabh = isFullConfidence && (h.nabh_accredited && (h.nabh_accredited.includes('Yes') || h.nabh_accredited.includes('NABH')));
+    const isCghs = isFullConfidence && (h.cghsEmpanelled || (h.name && (h.name.includes('AIIMS') || h.name.includes('Safdarjung') || h.name.includes('Max') || h.name.includes('Fortis'))));
+
+    const queryTarget = encodeURIComponent(`${h.name}, ${h.location || h.city || 'Meerut'}`);
     const mapsDirLink = `https://www.google.com/maps/dir/?api=1&destination=${queryTarget}`;
-    const mapsSearchLink = `https://www.google.com/maps/search/?api=1&query=${queryTarget}`;
     const coverImage = h.cover_image || (isGovt 
       ? 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&auto=format&fit=crop&q=80'
       : 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&auto=format&fit=crop&q=80');
@@ -74,121 +80,74 @@ export function renderPatientSearch(hospitals, activeTreatment = 'all', maxBudge
     const genTotal = (h.beds && h.beds.general) ? h.beds.general.total : 200;
     const genAvail = (h.beds && h.beds.general) ? h.beds.general.available : 35;
     const safeName = escapeHtml(h.name);
-    const safeTagline = escapeHtml(h.tagline || 'Tertiary Medical Center & Emergency Services');
-    const safeLocation = escapeHtml(h.location || 'India');
+
+    // Clean location avoiding literal null/undefined
+    const rawLoc = (h.address && h.address !== 'null' && h.address !== 'undefined') 
+      ? h.address 
+      : ((h.location && h.location !== 'null' && h.location !== 'undefined') ? h.location : (h.city ? `${h.city}, ${h.state || 'Uttar Pradesh'}` : 'Meerut, Uttar Pradesh'));
+    const safeLocation = escapeHtml(rawLoc);
 
     return `
-      <div class="hospital-card" id="card-${h.id}">
-        <div class="hospital-card-body">
-          <div class="hospital-thumbnail-wrap">
-            <img src="${coverImage}" alt="${safeName}" class="hospital-thumb-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&auto=format&fit=crop&q=80';">
-            <span class="hospital-thumb-type-tag ${isGovt ? 'govt' : 'pvt'}">
-              ${isGovt ? 'GOVERNMENT APEX' : 'PRIVATE MULTI-SPECIALTY'}
+      <div class="hospital-card compact-card ${isNameOnly ? 'card-name-only' : ''}" id="card-${h.id}">
+        <div class="compact-card-inner">
+          <!-- Left: Small square/avatar thumbnail image -->
+          <div class="compact-thumb-wrap">
+            <img src="${coverImage}" alt="${safeName}" class="compact-thumb-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=300&auto=format&fit=crop&q=80';">
+            <span class="compact-type-badge ${isGovt ? 'govt' : 'pvt'}">
+              ${isGovt ? 'GOVT' : 'PVT'}
             </span>
           </div>
 
-          <div class="hospital-main-content">
-            <div class="hospital-header-row">
-              <div class="hospital-title-area">
-                <h3>
-                  ${safeName}
-                  <span class="badge-tag nabh">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    NABH Accredited
-                  </span>
-                  ${isPmjay ? `<span class="badge-tag pmjay">Ayushman PM-JAY Cashless</span>` : ''}
-                  ${isCghs ? `<span class="badge-tag cghs">CGHS Empanelled</span>` : ''}
-                </h3>
-                <div class="hospital-tagline">${safeTagline}</div>
-                <div style="font-size: 0.8rem; color: var(--slate-500); margin-top: 3px;">
-                  <span style="display: inline-flex; align-items: center; gap: 4px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    ${safeLocation}
-                  </span>
-                </div>
+          <!-- Middle: Core Info -->
+          <div class="compact-info-col">
+            <!-- Line 1: Hospital Name + Badges + Rating -->
+            <div class="compact-title-row">
+              <h3 class="compact-hosp-name" title="${safeName}">${safeName}</h3>
+              <span class="badge-tag ${isGovt ? 'nabh' : (isNabh ? 'nabh' : 'cghs')} compact-badge">${isGovt ? 'Govt Apex' : (isNabh ? 'NABH Verified' : 'Healthcare')}</span>
+              ${isPmjay ? `<span class="badge-tag pmjay compact-badge">PM-JAY</span>` : ''}
+              ${isCghs && !isGovt ? `<span class="badge-tag cghs compact-badge">CGHS</span>` : ''}
+              ${isNameOnly ? `<span class="badge-tag name-verify compact-badge" title="Facility confirmed real in Meerut; full address and timings undergoing verification">Details Pending</span>` : ''}
+              <div class="rating-badge compact-rating" title="${h.rating || 4.7} out of 5 (${h.reviewCount || 350} reviews)">
+                ★ ${h.rating || 4.7}
               </div>
-
-              <div class="hospital-rating-box">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <button class="btn-fav-icon btn-toggle-fav ${isFavorite ? 'active' : ''}" data-id="${h.id}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}" aria-label="Favorite">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="${isFavorite ? '#ef4444' : 'none'}" stroke="${isFavorite ? '#ef4444' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                  </button>
-                  <div class="rating-badge">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#d97706" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    ${h.rating || 4.7} <span style="font-size: 0.72rem; color: #78350f; font-weight: 500;">(${h.reviewCount || 350})</span>
-                  </div>
-                </div>
-              </div>
+              <button class="btn-fav-icon btn-toggle-fav compact-fav ${isFavorite ? 'active' : ''}" data-id="${h.id}" title="${isFavorite ? 'Remove favorite' : 'Add to favorites'}" aria-label="Favorite">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="${isFavorite ? '#ef4444' : 'none'}" stroke="${isFavorite ? '#ef4444' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              </button>
             </div>
 
-            <!-- Live Bed Telemetry Strip -->
-            <div class="bed-telemetry-grid">
-              <div class="bed-telemetry-item">
-                <span class="bed-telemetry-label">ICU (Ventilator)</span>
-                <span class="bed-telemetry-count ${icuAvail > 0 ? 'available' : 'critical'}">
-                  ${icuAvail} <span class="bed-telemetry-total">/ ${icuTotal} Beds</span>
-                </span>
-              </div>
-              <div class="bed-telemetry-item">
-                <span class="bed-telemetry-label">Emergency Bay</span>
-                <span class="bed-telemetry-count ${emAvail > 0 ? 'available' : 'critical'}">
-                  ${emAvail} <span class="bed-telemetry-total">/ ${emTotal} Beds</span>
-                </span>
-              </div>
-              <div class="bed-telemetry-item">
-                <span class="bed-telemetry-label">Inpatient Ward</span>
-                <span class="bed-telemetry-count available">
-                  ${genAvail} <span class="bed-telemetry-total">/ ${genTotal} Beds</span>
-                </span>
-              </div>
+            <!-- Line 2: Address (clean text, no nulls) -->
+            <div class="compact-address-row" title="${safeLocation}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="loc-pin"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <span class="compact-address-text">${safeLocation}</span>
+              ${isNameOnly ? `<span style="font-size: 0.72rem; color: #b45309; background: #fef3c7; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-weight: 600;">Name Verified</span>` : ''}
             </div>
 
-            <!-- Metadata Strip -->
-            <div class="hospital-quick-meta">
-              <span class="meta-item">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                OPD Wait: <strong>~${h.opdWaitTimeMins || 25} mins</strong>
+            <!-- Line 3: 1-line bed stat + cost -->
+            <div class="compact-stats-row">
+              <span class="stat-pill ${icuAvail > 0 ? 'avail' : 'crit'}">
+                🫁 ICU <strong>${icuAvail}/${icuTotal}</strong>
               </span>
-              <span class="meta-item">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                ${h.phone || '+91 11 2658 8500'}
+              <span class="stat-pill ${emAvail > 0 ? 'avail' : 'crit'}">
+                🚨 Casualty <strong>${emAvail}/${emTotal}</strong>
               </span>
-              <span class="meta-item">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                Code Blue: <strong>24x7 Active</strong>
+              <span class="stat-pill">
+                🛏️ Beds <strong>${genAvail}/${genTotal}</strong>
+              </span>
+              <span class="stat-pill cost-pill">
+                💰 <strong>${isGovt ? '100% Free / Subsidized' : (isFullConfidence ? 'Standard Tariff' : 'Contact Hospital')}</strong>
               </span>
             </div>
           </div>
-        </div>
 
-        <div class="hospital-card-footer">
-          <div class="card-action-group">
-            <button class="btn btn-danger btn-book-amb" data-id="${h.id}">
+          <!-- Right: Exactly TWO Primary Action Buttons -->
+          <div class="compact-actions-col">
+            <button class="btn btn-outline btn-view-profile compact-btn" data-id="${h.id}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              View Details
+            </button>
+            <button class="btn btn-danger btn-book-amb compact-btn" data-id="${h.id}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-              Book 108 ALS Ambulance
-            </button>
-            <button class="btn btn-outline btn-open-google-map" data-id="${h.id}" style="font-weight: 700; color: #0284c7; border-color: #bae6fd; background: #f0f9ff;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              Exact Google Map
-            </button>
-            <a href="${mapsDirLink}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="font-weight: 600;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-              GPS Route
-            </a>
-          </div>
-
-          <div class="card-action-group">
-            <button class="btn btn-outline btn-view-profile" data-id="${h.id}" style="font-weight: 700; color: var(--primary); border-color: var(--primary-border); background: var(--primary-subtle);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
-              Hospital Profile & OPD Doctors
-            </button>
-            <button class="btn ${isCompared ? 'btn-teal' : 'btn-outline'} btn-toggle-compare" data-id="${h.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-              ${isCompared ? 'Comparing (Active)' : 'Compare'}
-            </button>
-            <button class="btn btn-outline btn-view-treatments" data-id="${h.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-              Tariff
+              Book 108 ALS
             </button>
           </div>
         </div>
@@ -204,52 +163,104 @@ export function openHospitalDetailModal(hosp) {
   const body = document.getElementById('hospDetailModalBody');
   if (!modal || !body) return;
 
-  title.textContent = hosp.name;
-  badge.textContent = hosp.badge || (hosp.type === 'government' ? 'Government Apex Institute' : 'NABH Multi-Specialty');
-
   const isGovt = hosp.type === 'government';
+  const isFullConfidence = hosp.data_confidence === 'Full';
+  const isNameOnly = hosp.data_confidence === 'Name-only-verify';
+
+  title.textContent = hosp.name;
+
+  if (isNameOnly) {
+    badge.textContent = 'Listing Verified (Details Pending)';
+    badge.className = 'badge-tag name-verify';
+  } else if (hosp.schemes_accepted && hosp.schemes_accepted.toUpperCase().includes('PM-JAY')) {
+    badge.textContent = 'PM-JAY Empanelled';
+    badge.className = 'badge-tag pmjay';
+  } else if (isGovt) {
+    badge.textContent = 'Government Apex Institute';
+    badge.className = 'badge-tag nabh';
+  } else {
+    badge.textContent = hosp.nabh_accredited ? 'NABH Accredited' : 'Verified Facility';
+    badge.className = 'badge-tag nabh';
+  }
+
   const icuTotal = hosp.beds?.icu?.total || 20;
   const icuAvail = hosp.beds?.icu?.available || 4;
   const emTotal = hosp.beds?.emergency?.total || 30;
   const emAvail = hosp.beds?.emergency?.available || 6;
   const genTotal = hosp.beds?.general?.total || 200;
   const genAvail = hosp.beds?.general?.available || 35;
+  const isCompared = (compareList || []).some(item => item.id === hosp.id);
 
-  const doctorsList = hosp.doctors && hosp.doctors.length > 0 ? hosp.doctors : [
-    { name: "Dr. Arvind Saxena", spec: "Chief of Emergency Medicine", exp: "22 yrs", status: "In Casualty" },
-    { name: "Dr. Sunita Sharma", spec: "Senior Cardiologist", exp: "18 yrs", status: "Available in OPD" }
-  ];
+  const doctorsList = hosp.doctors && hosp.doctors.length > 0 ? hosp.doctors : (
+    isNameOnly ? [] : [
+      { name: "Dr. Arvind Saxena", spec: "Chief of Emergency Medicine", exp: "22 yrs", status: "In Casualty" },
+      { name: "Dr. Sunita Sharma", spec: "Senior Cardiologist", exp: "18 yrs", status: "Available in OPD" }
+    ]
+  );
 
   const treatmentsList = hosp.treatments && hosp.treatments.length > 0 ? hosp.treatments : [
     { name: "Emergency Trauma Resuscitation", cost: isGovt ? 500 : 4500, duration: "Daycare" },
     { name: "Cardiac Angioplasty", cost: isGovt ? 45000 : 155000, duration: "3 Days Inpatient" }
   ];
-  const queryTarget = encodeURIComponent(`${hosp.name}, ${hosp.location || ''}`);
+
+  const displayAddress = (hosp.address && hosp.address !== 'null' && hosp.address !== 'undefined') 
+    ? hosp.address 
+    : ((hosp.location && hosp.location !== 'null' && hosp.location !== 'undefined') ? hosp.location : 'Meerut, Uttar Pradesh');
+
+  const displayPhone = (hosp.phone && hosp.phone !== 'null' && hosp.phone !== 'undefined' && hosp.phone !== '108' && hosp.phone.trim() !== '')
+    ? hosp.phone
+    : null;
+
+  const phoneHtml = displayPhone
+    ? `<a href="tel:${displayPhone}" style="color: var(--primary); font-weight: 600; text-decoration: none;">${displayPhone}</a>`
+    : `<span style="color: var(--slate-500); font-style: italic;">Contact hospital directly (Phone undergoing verification)</span>`;
+
+  const displayOpd = (hosp.working_hours && hosp.working_hours !== 'null' && hosp.working_hours !== 'undefined')
+    ? hosp.working_hours
+    : 'OPD Schedule: Inquire at reception';
+
+  const queryTarget = encodeURIComponent(`${hosp.name}, ${displayAddress}`);
   const mapsDirLink = `https://www.google.com/maps/dir/?api=1&destination=${queryTarget}`;
   const mapsSearchLink = `https://www.google.com/maps/search/?api=1&query=${queryTarget}`;
   const embedUrl = `https://maps.google.com/maps?q=${queryTarget}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
 
   body.innerHTML = `
+    ${isNameOnly ? `
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: #92400e;">
+        <span style="font-size: 1.3rem;">ℹ️</span>
+        <div>
+          <strong>Verified Facility Listing:</strong> This hospital is confirmed operational in Meerut. Direct contact numbers, OPD specialty roster, and bed telemetry are being verified with hospital administration.
+        </div>
+      </div>
+    ` : ''}
+
     <!-- Top Hospital Meta Banner -->
     <div style="display: flex; gap: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; background: var(--slate-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--slate-200);">
       <div style="flex: 1; min-width: 260px;">
-        <h4 style="font-size: 1.1rem; color: var(--slate-900); margin-bottom: 4px;">${hosp.name}</h4>
-        <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 8px;">${hosp.tagline || 'Apex Healthcare Institution'}</p>
+        <h4 style="font-size: 1.15rem; color: var(--slate-900); margin-bottom: 4px;">${hosp.name}</h4>
+        <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 8px;">${hosp.tagline || 'Healthcare Facility & Casualty Services'}</p>
         
-        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--slate-700);">
-          <div>📍 <strong>Address:</strong> ${hosp.location}</div>
-          <div>📞 <strong>Telephone:</strong> ${hosp.phone}</div>
-          <div>🛡️ <strong>Clinical Reg:</strong> <code>${hosp.reg_number || 'NABH-2026-REG-01'}</code></div>
+        <div style="display: flex; flex-direction: column; gap: 5px; font-size: 0.84rem; color: var(--slate-700);">
+          <div>📍 <strong>Address:</strong> ${displayAddress}</div>
+          <div>📞 <strong>Telephone:</strong> ${phoneHtml}</div>
+          <div>⏱️ <strong>OPD Timings:</strong> ${displayOpd} &bull; 🚨 <strong>Casualty:</strong> 24x7 Active</div>
+          <div>🛡️ <strong>Data Status:</strong> <code>${isFullConfidence ? 'Full Verification' : 'Name Verified'}</code></div>
         </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 10px;">
         <div class="rating-badge" style="font-size: 0.95rem; padding: 4px 10px;">
-          ★ ${hosp.rating || 4.8} (${hosp.reviewCount || 350} Patient Reviews)
+          ★ ${hosp.rating || 4.8} (${hosp.reviewCount || 350} Reviews)
         </div>
-        <button class="btn btn-danger btn-book-amb" data-id="${hosp.id}" style="padding: 8px 16px; font-size: 0.85rem;">
-          🚨 Dispatch 108 Ambulance
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+          <button class="btn ${isCompared ? 'btn-teal' : 'btn-outline'} btn-toggle-compare" data-id="${hosp.id}" style="padding: 8px 14px; font-size: 0.82rem; font-weight: 600;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            ${isCompared ? 'Comparing (Active)' : 'Compare'}
+          </button>
+          <button class="btn btn-danger btn-book-amb" data-id="${hosp.id}" style="padding: 8px 16px; font-size: 0.84rem; font-weight: 700;">
+            🚨 Dispatch 108 Ambulance
+          </button>
+        </div>
       </div>
     </div>
 
@@ -323,18 +334,23 @@ export function openHospitalDetailModal(hosp) {
         Specialist Doctor Roster & OPD Token Booking
       </h4>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
-        ${doctorsList.map((doc, idx) => `
+        ${doctorsList.length > 0 ? doctorsList.map((doc, idx) => `
           <div style="background: var(--surface-white); border: 1px solid var(--slate-200); padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <div>
-              <div style="font-weight: 700; color: var(--slate-900); font-size: 0.92rem;">${doc.name}</div>
-              <div style="font-size: 0.78rem; color: var(--primary); font-weight: 600;">${doc.spec}</div>
-              <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 2px;">Exp: ${doc.exp || '15 yrs'} • <span style="color: #059669; font-weight: 600;">${doc.status || 'Available in OPD'}</span></div>
+              <div style="font-weight: 700; color: var(--slate-900); font-size: 0.92rem;">${escapeHtml(doc.name)}</div>
+              <div style="font-size: 0.78rem; color: var(--primary); font-weight: 600;">${escapeHtml(doc.spec || 'Consultant')}</div>
+              <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 2px;">Exp: ${doc.exp || '10+ yrs'} • <span style="color: #059669; font-weight: 600;">${escapeHtml(doc.status || 'Available in OPD')}</span></div>
             </div>
-            <button class="btn btn-primary btn-book-opd-token" data-hosp="${hosp.name}" data-doc="${doc.name}" data-spec="${doc.spec}" data-fee="${isGovt ? 0 : 600}" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700;">
+            <button class="btn btn-primary btn-book-opd-token" data-hosp="${escapeHtml(hosp.name)}" data-doc="${escapeHtml(doc.name)}" data-spec="${escapeHtml(doc.spec || 'Consultant')}" data-fee="${isGovt ? 0 : (doc.fee || 350)}" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700;">
               Get OPD Token
             </button>
           </div>
-        `).join('')}
+        `).join('') : `
+          <div style="grid-column: 1 / -1; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 1.25rem; text-align: center; color: #64748b; font-size: 0.85rem;">
+            👨‍⚕️ Specialist doctor roster is undergoing periodic administrative verification.<br>
+            <strong style="color: var(--slate-700);">Please contact the hospital reception directly for today's OPD consultation slots.</strong>
+          </div>
+        `}
       </div>
     </div>
 
