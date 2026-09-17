@@ -25,8 +25,11 @@
         National Health Helpline: <strong>14477</strong>
       </span>
     </div>
-    <div>
-      Government & NABH Partner Network
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button id="btnGlobalSos" class="btn btn-danger" style="padding: 3px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 9999px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; border: none; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);">
+        🚨 Emergency SOS Mode
+      </button>
+      <span>Government &amp; NABH Partner Network</span>
     </div>
   </div>
 
@@ -135,9 +138,9 @@
       <div class="emergency-ribbon-content">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 1.2rem;">🚨</span>
-          <span><strong>Emergency Mode Active:</strong> Showing real-time ICU beds & fast-track 108 ambulance booking</span>
+          <span><strong>Emergency Mode Active:</strong> Showing real-time ICU beds, blood banks nearby &amp; fast-track 108 ambulance booking</span>
         </div>
-        <button id="btnExitEmergency" class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.4); padding: 2px 8px; font-size: 0.75rem;">Exit Emergency Mode</button>
+        <button id="btnExitEmergency" class="btn" style="background: #991b1b; color: white; border: none; padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Exit Emergency Mode</button>
       </div>
     </div>
 
@@ -398,6 +401,25 @@
             <div class="hospital-list" id="hospitalListContainer">
               <!-- Dynamically rendered via patient.js -->
             </div>
+
+            <!-- Emergency Mode: Nearby Blood Banks (SOS) -->
+            <div id="emergencyNearbyBloodBanksSection" class="emergency-blood-section" style="display: none; margin-top: 1.5rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; padding-bottom: 0.5rem; border-bottom: 2px solid #fee2e2;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.25rem;">🩸</span>
+                  <div>
+                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #991b1b;">Blood Banks Nearby</h3>
+                    <p style="margin: 2px 0 0; font-size: 0.78rem; color: var(--slate-500);">Emergency SOS verified blood centers sorted by nearest distance</p>
+                  </div>
+                </div>
+                <span class="badge-tag" style="background: #fee2e2; color: #991b1b; font-weight: 700; font-size: 0.75rem;">
+                  🚨 Emergency SOS
+                </span>
+              </div>
+              <div id="emergencyNearbyBloodBanksList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
           </div>
 
         </div>
@@ -500,6 +522,19 @@
                 <div class="telemetry-item">
                   <span class="telemetry-label">Est. Time of Arrival</span>
                   <span class="telemetry-value" style="color: #38bdf8;">~7 Minutes</span>
+                </div>
+              </div>
+
+              <!-- Emergency Mode: Nearby Blood Banks (Ambulance View) -->
+              <div id="emergencyNearbyBloodBanksAmbulanceSection" class="card-panel" style="margin-top: 1rem; padding: 1.25rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;">
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #991b1b; display: flex; align-items: center; gap: 6px;">
+                    <span>🩸</span> Blood Banks Nearby
+                  </h4>
+                  <span style="font-size: 0.75rem; color: var(--slate-500);">Sorted by Nearest First</span>
+                </div>
+                <div id="emergencyNearbyBloodBanksAmbulanceList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                  <!-- Dynamically populated -->
                 </div>
               </div>
             </div>

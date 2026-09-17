@@ -11,6 +11,10 @@ let bloodState = {
   searchQuery: ''
 };
 
+export function getBloodInventory() {
+  return bloodState.inventory;
+}
+
 // Blood Compatibility Chart Data (Red Blood Cells)
 const COMPATIBILITY_DATA = {
   'O-': { canDonateTo: ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'], canReceiveFrom: ['O-'], notes: 'Universal Red Cell Donor' },

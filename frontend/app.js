@@ -8,9 +8,10 @@ import {
   focusHospitalOnMap,
   openHospitalDetailModal,
   openOpdTokenModal,
-  openGoogleMapModal
+  openGoogleMapModal,
+  escapeHtml
 } from './patient.js?v=2.1';
-import { initBloodBankModule, loadBloodBankData } from './blood_bank.js?v=2.1';
+import { initBloodBankModule, loadBloodBankData, getBloodInventory } from './blood_bank.js?v=2.1';
 
 let state = {
   hospitals: [],
@@ -125,9 +126,190 @@ function updateViews() {
     ? state.hospitals.filter(h => (state.favoritesList || []).includes(h.id))
     : state.hospitals;
 
+  // Update Emergency Ribbon display
+  const ribbon = document.getElementById('emergencyBypassRibbon');
+  if (ribbon) ribbon.style.display = state.emergencyOnly ? 'flex' : 'none';
+
   // Update Patient View
   renderPatientSearch(displayHospitals, state.activeTreatmentFilter, state.maxBudget, state.emergencyOnly, state.activeHospType, state.favoritesList);
   renderHospitalsMap(displayHospitals);
+
+  // Render Nearby Blood Banks for Emergency SOS Mode
+  renderNearbyBloodBanks();
+}
+
+// Render Nearby Blood Banks for Emergency SOS Mode
+export function renderNearbyBloodBanks() {
+  const container = document.getElementById('emergencyNearbyBloodBanksList');
+  const ambContainer = document.getElementById('emergencyNearbyBloodBanksAmbulanceList');
+  const section = document.getElementById('emergencyNearbyBloodBanksSection');
+
+  if (section) {
+    section.style.display = state.emergencyOnly ? 'block' : 'none';
+  }
+
+  if (!state.emergencyOnly) {
+    if (container) container.innerHTML = '';
+    if (ambContainer) ambContainer.innerHTML = '';
+    return;
+  }
+
+  if (!container && !ambContainer) return;
+
+  const inventory = getBloodInventory();
+  if (!inventory || inventory.length === 0) {
+    if (container) {
+      container.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted); padding: 0.5rem;">Loading verified nearby blood centers...</p>`;
+    }
+    loadBloodBankData().then(() => {
+      const refreshed = getBloodInventory();
+      if (refreshed && refreshed.length > 0) renderNearbyBloodBanks();
+    }).catch(() => {});
+    return;
+  }
+
+  // Group inventory items by hospital/facility
+  const banksMap = new Map();
+  inventory.forEach(item => {
+    const key = item.hospital_id || item.hospital_name;
+    if (!banksMap.has(key)) {
+      banksMap.set(key, {
+        hospital_id: item.hospital_id,
+        hospital_name: item.hospital_name,
+        city: item.city,
+        totalUnits: 0,
+        availableCount: 0,
+        items: []
+      });
+    }
+    const b = banksMap.get(key);
+    const units = item.units_available || 0;
+    b.totalUnits += units;
+    if (units >= 10) b.availableCount++;
+    b.items.push(item);
+  });
+
+  // Calculate distance using existing hospital distance logic and sort nearest first
+  const bloodBanks = Array.from(banksMap.values()).map(bank => {
+    // Match with existing hospital in state.hospitals
+    const matchedHosp = (state.hospitals || []).find(h => 
+      h.id === bank.hospital_id || 
+      (h.name && bank.hospital_name && (
+        h.name.toLowerCase().includes(bank.hospital_name.toLowerCase()) || 
+        bank.hospital_name.toLowerCase().includes(h.name.toLowerCase())
+      ))
+    );
+
+    // Reuse existing hospital distance (fallback to distanceKm from hospital record or default)
+    const distanceKm = matchedHosp ? (matchedHosp.distanceKm ?? matchedHosp.distance_km ?? 2.5) : (bank.distance_km ?? 2.5);
+
+    // Stock Status using existing status data: Available / Low Stock / Not Available
+    let statusText = 'Available';
+    let statusClass = 'avail';
+    let statusDot = '🟢';
+
+    if (bank.totalUnits <= 0) {
+      statusText = 'Not Available';
+      statusClass = 'crit';
+      statusDot = '🔴';
+    } else if (bank.totalUnits < 10 || bank.availableCount === 0) {
+      statusText = 'Low Stock';
+      statusClass = 'low';
+      statusDot = '🟡';
+    }
+
+    const cleanName = bank.hospital_name.toLowerCase().includes('blood') 
+      ? bank.hospital_name 
+      : `${bank.hospital_name} Blood Bank`;
+
+    return {
+      name: cleanName,
+      distanceKm: parseFloat(Number(distanceKm).toFixed(1)),
+      statusText: `${statusDot} ${statusText}`,
+      statusClass
+    };
+  });
+
+  // Sort by nearest first
+  bloodBanks.sort((a, b) => a.distanceKm - b.distanceKm);
+
+  // Render cards (matching existing hospital-card compact style with 3 items: Name, Distance, Stock Status)
+  const html = bloodBanks.map(b => `
+    <div class="hospital-card compact-card" style="margin-bottom: 0;">
+      <div class="compact-card-inner" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+            🩸
+          </div>
+          <div style="min-width: 0;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin: 0 0 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(b.name)}">
+              ${escapeHtml(b.name)}
+            </h4>
+            <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <span>${b.distanceKm} km away</span>
+            </div>
+          </div>
+        </div>
+        <div style="flex-shrink: 0; text-align: right;">
+          <span class="stat-pill ${b.statusClass}" style="font-weight: 700; font-size: 0.8rem; padding: 4px 10px;">
+            ${b.statusText}
+          </span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  if (container) container.innerHTML = html;
+  if (ambContainer) ambContainer.innerHTML = html;
+}
+
+export async function activateEmergencyMode() {
+  state.emergencyOnly = true;
+
+  const ribbon = document.getElementById('emergencyBypassRibbon');
+  if (ribbon) ribbon.style.display = 'flex';
+
+  const emergencyCheck = document.getElementById('emergencyFilterCheck');
+  if (emergencyCheck) emergencyCheck.checked = true;
+
+  const chipIcuOnly = document.getElementById('chipIcuOnly');
+  if (chipIcuOnly) chipIcuOnly.classList.add('active');
+
+  const searchTabBtn = document.querySelector('.patient-nav-tab[data-tab="search"]');
+  if (searchTabBtn && !searchTabBtn.classList.contains('active')) {
+    searchTabBtn.click();
+  }
+
+  await fetchHospitals();
+  updateViews();
+
+  showToast('🚨 Emergency SOS Mode Active — Showing ICU Facilities & Blood Banks Nearby', 'danger');
+
+  if (ribbon) {
+    ribbon.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+export async function deactivateEmergencyMode() {
+  state.emergencyOnly = false;
+
+  const ribbon = document.getElementById('emergencyBypassRibbon');
+  if (ribbon) ribbon.style.display = 'none';
+
+  const emergencyCheck = document.getElementById('emergencyFilterCheck');
+  if (emergencyCheck) emergencyCheck.checked = false;
+
+  const chipIcuOnly = document.getElementById('chipIcuOnly');
+  if (chipIcuOnly) chipIcuOnly.classList.remove('active');
+
+  const section = document.getElementById('emergencyNearbyBloodBanksSection');
+  if (section) section.style.display = 'none';
+
+  await fetchHospitals();
+  updateViews();
+
+  showToast('Exited Emergency Mode: Showing all hospitals', 'info');
 }
 
 // Load Patient Favorite Hospitals
@@ -517,11 +699,11 @@ async function checkAuth() {
   const guestNav = document.getElementById('guestNavAction');
   const profileHeader = document.getElementById('userProfileHeader');
   const patientSec = document.getElementById('patientViewSection');
-  const emergencyRib = document.getElementById('emergencyRibbon');
+  const emergencyRib = document.getElementById('emergencyBypassRibbon');
 
   // Keep patient search and discovery active for all visitors
   if (patientSec) patientSec.classList.add('active');
-  if (emergencyRib) emergencyRib.style.display = 'flex';
+  if (emergencyRib) emergencyRib.style.display = state.emergencyOnly ? 'flex' : 'none';
 
   if (token && userJson) {
     state.currentUser = JSON.parse(userJson);
@@ -569,6 +751,7 @@ async function loadDashboardData() {
   loadPatientSchemes();
   loadSchemesCatalog();
   loadFavorites();
+  loadBloodBankData();
 
   // Guard against asynchronous browser autofill populating search bar
   [50, 150, 300, 600, 1000].forEach(delay => {
@@ -931,6 +1114,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (tabTarget === 'schemes') {
         loadPatientSchemes();
         loadSchemesCatalog();
+      } else if (tabTarget === 'ambulance') {
+        renderNearbyBloodBanks();
       } else if (tabTarget === 'blood') {
         loadBloodBankData();
       }
@@ -1020,6 +1205,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (emergencyCheck) {
     emergencyCheck.addEventListener('change', async (e) => {
       state.emergencyOnly = e.target.checked;
+      const ribbon = document.getElementById('emergencyBypassRibbon');
+      if (ribbon) ribbon.style.display = state.emergencyOnly ? 'flex' : 'none';
+      const chip = document.getElementById('chipIcuOnly');
+      if (chip) chip.classList.toggle('active', state.emergencyOnly);
       await fetchHospitals();
       updateViews();
     });
@@ -1055,9 +1244,19 @@ document.addEventListener('DOMContentLoaded', () => {
       chipIcuOnly.classList.toggle('active', state.emergencyOnly);
       const emergencyCheck = document.getElementById('emergencyFilterCheck');
       if (emergencyCheck) emergencyCheck.checked = state.emergencyOnly;
+      const ribbon = document.getElementById('emergencyBypassRibbon');
+      if (ribbon) ribbon.style.display = state.emergencyOnly ? 'flex' : 'none';
       await fetchHospitals();
       updateViews();
-      showToast(state.emergencyOnly ? 'Filtering: Active ICU Beds Only' : 'Showing all hospital beds', 'info');
+      showToast(state.emergencyOnly ? '🚨 Emergency Mode Active: Showing ICU Beds & Blood Banks Nearby' : 'Showing all hospital beds', 'info');
+    });
+  }
+
+  // Exit Emergency Mode Ribbon Button
+  const btnExitEmergency = document.getElementById('btnExitEmergency');
+  if (btnExitEmergency) {
+    btnExitEmergency.addEventListener('click', () => {
+      deactivateEmergencyMode();
     });
   }
 
@@ -1329,8 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Emergency SOS Trigger Button
     if (e.target.closest('#btnGlobalSos')) {
-      alert("🚨 EMERGENCY SOS ACTIVATED!\nSending high-priority location beacon to nearest ambulance fleet (City Care Hospital) & notifying family contacts...");
-      showToast("🚨 SOS Beacon Dispatched to Emergency Services", "danger");
+      activateEmergencyMode();
     }
 
     // View Treatment Details Modal Button

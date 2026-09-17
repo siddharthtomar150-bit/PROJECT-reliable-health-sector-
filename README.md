@@ -180,5 +180,6 @@ hospital-finder-main/
 
 ## ⚠️ Medical & Legal Disclaimer
 
-This application is an informational tool and decision-support prototype. It does **not** provide medical diagnosis, does **not** replace consultation with qualified healthcare professionals, and does **not** guarantee exact treatment costs or bed availability. All clinical costs, wait times, and bed capacities are estimates or periodic updates. In the event of a life-threatening medical emergency, call **108** or proceed immediately to the nearest hospital casualty department.#   P R O J E C T - r e l i a b l e - h e a l t h - s e c t o r -  
+This application is an informational tool and decision-support prototype. It does **not** provide medical diagnosis, does **not** replace consultation with qualified healthcare professionals, and does **not** guarantee exact treatment costs or bed availability. All clinical costs, wait times, and bed capacities are estimates or periodic updates. In the event of a life-threatening medical emergency, call **108** or proceed immediately to the nearest hospital casualty department.#   P R O J E C T - r e l i a b l e - h e a l t h - s e c t o r - 
+ 
  
